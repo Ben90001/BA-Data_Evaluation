@@ -31,13 +31,24 @@ def getAverageData(filename,rounds,n_max):
     print('\n')
     return average_data
 
+# config
+#--------------------------------------------------------------------------------
 rounds = 5
 n_max = 200
-ISTL_data = getAverageData('results_ISTL.txt',rounds,n_max)
+plot_csr = True
+plot_ell = True
+plot_omp = True
+plot_mtx_assembly_data = True
+
+plot_with_logarithmic_scale = False
+#--------------------------------------------------------------------------------
+
 # note: assembly referes to "matrix_assemlby_data" vs. "matrix_data" classe used to assembly the matrix in ginkgo
+ISTL_data = getAverageData('results_ISTL.txt',rounds,n_max)
 GINKGO_data_assembly = getAverageData('results_ginkgo_mtx-assembly-data__reference_csr.txt',rounds,n_max)
 GINKGO_data_csr = getAverageData('results_ginkgo_mtx-data__reference_csr.txt',rounds,n_max)
 GINKGO_data_ell = getAverageData('results_ginkgo_mtx-data_reference_ell.txt',rounds,n_max)
+GINKGO_data_omp_csr = getAverageData('results_gko_mtx-data_omp_csr.txt',rounds,n_max)
 
 # use average values
 x = list(range(1, n_max+1))
@@ -62,34 +73,56 @@ d2_SpMV_ginkgo_ell = [GINKGO_data_ell[value-1][3] for value in x]
 d3_gen_ginkgo_ell = [GINKGO_data_ell[n_max+value-1][2] for value in x] 
 d3_SpMV_ginkgo_ell = [GINKGO_data_ell[n_max+value-1][3] for value in x] 
 
+d2_gen_ginkgo_omp = [GINKGO_data_omp_csr[value-1][2] for value in x] 
+d2_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[value-1][3] for value in x] 
+d3_gen_ginkgo_omp = [GINKGO_data_omp_csr[n_max+value-1][2] for value in x] 
+d3_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n_max+value-1][3] for value in x] 
 
 
 figure, axis = plt.subplots(2, 2)
 
+
+# ISTL
 axis[0,0].plot(x, d2_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[0,0].plot(x, d2_gen_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')#, linestyle='None', marker='x')
-axis[0,0].plot(x, d2_gen_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
-axis[0,0].plot(x, d2_gen_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
-
-axis[0, 0].set_title("d=2 average time to generate sparse matrix")
-
 axis[1,0].plot(x, d2_SpMV_istl, color='blue', alpha=1, label='ISTL')
-axis[1,0].plot(x, d2_SpMV_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
-axis[1,0].plot(x, d2_SpMV_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
-axis[1,0].plot(x, d2_SpMV_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
-axis[1, 0].set_title("d=2 average time to calculate SpMV")
-
 axis[0,1].plot(x, d3_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[0,1].plot(x, d3_gen_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
-axis[0,1].plot(x, d3_gen_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
-axis[0,1].plot(x, d3_gen_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
-axis[0, 1].set_title("d=3 average time to generate sparse matrix")
-
 axis[1,1].plot(x, d3_SpMV_istl, color='blue', alpha=1, label='ISTL')
-axis[1,1].plot(x, d3_SpMV_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
-axis[1,1].plot(x, d3_SpMV_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
-axis[1,1].plot(x, d3_SpMV_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
-axis[1, 1].set_title("d=3 average time to calculate SpMV")
+
+# gko mtx_assembly_data
+if(plot_mtx_assembly_data):
+    axis[0,0].plot(x, d2_gen_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
+    axis[1,0].plot(x, d2_SpMV_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
+    axis[0,1].plot(x, d3_gen_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
+    axis[1,1].plot(x, d3_SpMV_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
+
+# gko Csr
+if(plot_csr):
+    axis[0,0].plot(x, d2_gen_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
+    axis[1,0].plot(x, d2_SpMV_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
+    axis[0,1].plot(x, d3_gen_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
+    axis[1,1].plot(x, d3_SpMV_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
+
+# gko Ell
+if(plot_ell):
+    axis[0,0].plot(x, d2_gen_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
+    axis[1,0].plot(x, d2_SpMV_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
+    axis[0,1].plot(x, d3_gen_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
+    axis[1,1].plot(x, d3_SpMV_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
+
+# gko omp
+if(plot_omp):
+    axis[0,0].plot(x, d2_gen_ginkgo_omp, color='purple', alpha=1, label='gko omp')
+    axis[1,0].plot(x, d2_SpMV_ginkgo_omp, color='purple', alpha=1, label='gko omp')
+    axis[0,1].plot(x, d3_gen_ginkgo_omp, color='purple', alpha=1, label='gko omp')
+    axis[1,1].plot(x, d3_SpMV_ginkgo_omp, color='purple', alpha=1, label='gko omp')
+
+
+
+# Set titles
+axis[0,0].set_title("d=2 average time to generate sparse matrix")
+axis[1,0].set_title("d=2 average time to calculate SpMV")
+axis[0,1].set_title("d=3 average time to generate sparse matrix")
+axis[1,1].set_title("d=3 average time to calculate SpMV")
 
 
 
@@ -97,7 +130,8 @@ for ax in axis.flat:
     ax.set_xlabel('n values')
     ax.set_ylabel('time in nanoseconds')
     ax.legend()
-    #ax.set_yscale('log')
+    if(plot_with_logarithmic_scale):
+        ax.set_yscale('log')
 
 # single plot
 #plt.yscale('log')
