@@ -34,9 +34,12 @@ def getAverageData(filename,rounds,n_max):
 rounds = 5
 n_max = 200
 ISTL_data = getAverageData('results_ISTL.txt',rounds,n_max)
-GINKGO_data = getAverageData('results_ginkgo_reference_csr.txt',rounds,n_max)
+# note: assembly referes to "matrix_assemlby_data" vs. "matrix_data" classe used to assembly the matrix in ginkgo
+GINKGO_data_assembly = getAverageData('results_ginkgo_mtx-assembly-data__reference_csr.txt',rounds,n_max)
+GINKGO_data_csr = getAverageData('results_ginkgo_mtx-data__reference_csr.txt',rounds,n_max)
+GINKGO_data_ell = getAverageData('results_ginkgo_mtx-data_reference_ell.txt',rounds,n_max)
 
-# plot average values
+# use average values
 x = list(range(1, n_max+1))
 print(x)
 d2_gen_istl = [ISTL_data[value-1][2] for value in x] 
@@ -44,29 +47,48 @@ d2_SpMV_istl = [ISTL_data[value-1][3] for value in x]
 d3_gen_istl = [ISTL_data[n_max+value-1][2] for value in x] 
 d3_SpMV_istl = [ISTL_data[n_max+value-1][3] for value in x] 
 
-d2_gen_ginkgo = [GINKGO_data[value-1][2] for value in x] 
-d2_SpMV_ginkgo = [GINKGO_data[value-1][3] for value in x] 
-d3_gen_ginkgo = [GINKGO_data[n_max+value-1][2] for value in x] 
-d3_SpMV_ginkgo = [GINKGO_data[n_max+value-1][3] for value in x] 
+d2_gen_ginkgo_asbly = [GINKGO_data_assembly[value-1][2] for value in x] 
+d2_SpMV_ginkgo_asbly = [GINKGO_data_assembly[value-1][3] for value in x] 
+d3_gen_ginkgo_asbly = [GINKGO_data_assembly[n_max+value-1][2] for value in x] 
+d3_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n_max+value-1][3] for value in x] 
+
+d2_gen_ginkgo_csr = [GINKGO_data_csr[value-1][2] for value in x] 
+d2_SpMV_ginkgo_csr = [GINKGO_data_csr[value-1][3] for value in x] 
+d3_gen_ginkgo_csr = [GINKGO_data_csr[n_max+value-1][2] for value in x] 
+d3_SpMV_ginkgo_csr = [GINKGO_data_csr[n_max+value-1][3] for value in x] 
+
+d2_gen_ginkgo_ell = [GINKGO_data_ell[value-1][2] for value in x] 
+d2_SpMV_ginkgo_ell = [GINKGO_data_ell[value-1][3] for value in x] 
+d3_gen_ginkgo_ell = [GINKGO_data_ell[n_max+value-1][2] for value in x] 
+d3_SpMV_ginkgo_ell = [GINKGO_data_ell[n_max+value-1][3] for value in x] 
 
 
 
 figure, axis = plt.subplots(2, 2)
 
 axis[0,0].plot(x, d2_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[0,0].plot(x, d2_gen_ginkgo, color='green', alpha=1, label='Ginkgo')#, linestyle='None', marker='x')
+axis[0,0].plot(x, d2_gen_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')#, linestyle='None', marker='x')
+axis[0,0].plot(x, d2_gen_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
+axis[0,0].plot(x, d2_gen_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
+
 axis[0, 0].set_title("d=2 average time to generate sparse matrix")
 
 axis[1,0].plot(x, d2_SpMV_istl, color='blue', alpha=1, label='ISTL')
-axis[1,0].plot(x, d2_SpMV_ginkgo, color='green', alpha=1, label='Ginkgo')
+axis[1,0].plot(x, d2_SpMV_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
+axis[1,0].plot(x, d2_SpMV_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
+axis[1,0].plot(x, d2_SpMV_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
 axis[1, 0].set_title("d=2 average time to calculate SpMV")
 
 axis[0,1].plot(x, d3_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[0,1].plot(x, d3_gen_ginkgo, color='green', alpha=1, label='Ginkgo')
+axis[0,1].plot(x, d3_gen_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
+axis[0,1].plot(x, d3_gen_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
+axis[0,1].plot(x, d3_gen_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
 axis[0, 1].set_title("d=3 average time to generate sparse matrix")
 
 axis[1,1].plot(x, d3_SpMV_istl, color='blue', alpha=1, label='ISTL')
-axis[1,1].plot(x, d3_SpMV_ginkgo, color='green', alpha=1, label='Ginkgo')
+axis[1,1].plot(x, d3_SpMV_ginkgo_asbly, color='red', alpha=1, label='Ginkgo mtx_assembly_data')
+axis[1,1].plot(x, d3_SpMV_ginkgo_csr, color='brown', alpha=1, label='Ginkgo Csr')
+axis[1,1].plot(x, d3_SpMV_ginkgo_ell, color='grey', alpha=1, label='Ginkgo Ell')
 axis[1, 1].set_title("d=3 average time to calculate SpMV")
 
 
@@ -77,7 +99,7 @@ for ax in axis.flat:
     ax.legend()
     #ax.set_yscale('log')
 
-
+# single plot
 #plt.yscale('log')
 #plt.xlabel('n values')
 #plt.ylabel('time in nanoseconds')
