@@ -44,11 +44,11 @@ plot_with_logarithmic_scale = False
 #--------------------------------------------------------------------------------
 
 # note: assembly referes to "matrix_assemlby_data" vs. "matrix_data" classe used to assembly the matrix in ginkgo
-ISTL_data = getAverageData('results_ISTL.txt',rounds,n_max)
-GINKGO_data_assembly = getAverageData('results_ginkgo_mtx-assembly-data__reference_csr.txt',rounds,n_max)
-GINKGO_data_csr = getAverageData('results_ginkgo_mtx-data__reference_csr.txt',rounds,n_max)
-GINKGO_data_ell = getAverageData('results_ginkgo_mtx-data_reference_ell.txt',rounds,n_max)
-GINKGO_data_omp_csr = getAverageData('results_gko_mtx-data_omp_csr.txt',rounds,n_max)
+ISTL_data = getAverageData('./results/results_ISTL.txt',rounds,n_max)
+GINKGO_data_assembly = getAverageData('./results/results_ginkgo_mtx-assembly-data__reference_csr.txt',rounds,n_max)
+GINKGO_data_csr = getAverageData('./results/results_ginkgo_mtx-data__reference_csr.txt',rounds,n_max)
+GINKGO_data_ell = getAverageData('./results/results_ginkgo_mtx-data_reference_ell.txt',rounds,n_max)
+GINKGO_data_omp_csr = getAverageData('./results/results_gko_mtx-data_omp_csr.txt',rounds,n_max)
 
 # use average values
 x = list(range(1, n_max+1))
