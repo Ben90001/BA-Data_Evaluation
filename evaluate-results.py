@@ -46,7 +46,7 @@ plot_mtx_assembly_data_setOnly = True
 plot_omp = False
 
 
-plot_with_logarithmic_scale = True
+plot_with_logarithmic_scale = False
 #-----------------------------------------------------------------------------------------------------------------------------
 
 # note: assembly referes to "matrix_assemlby_data" vs. "matrix_data" classe used to assembly the matrix in ginkgo
