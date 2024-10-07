@@ -177,7 +177,10 @@ if(plot_omp):
 
 
 # Set titles
-axis[0,0].set_title("d=2 average time to generate sparse matrix")
+perNNZ=""
+if(plot_per_mtx_entry):
+    perNNZ= " per NNZ"
+axis[0,0].set_title("d=2 average time to generate sparse matrix"+perNNZ)
 axis[1,0].set_title("d=2 average time to calculate SpMV")
 axis[0,1].set_title("d=3 average time to generate sparse matrix")
 axis[1,1].set_title("d=3 average time to calculate SpMV")
