@@ -120,6 +120,7 @@ d3_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][3]/devisors_3
 #d3_SPMV_diff_ISTL_gko = [(GINKGO_data_assembly[n_max+n-1][3] - ISTL_data[n_max+n-1][3]) for n in x]
 
 # single plot
+'''
 if(plot_SpMV_d3_only):
     if(plot_csr): plt.plot(x, d3_SpMV_ginkgo_csr, label='Ginkgo')
     if(plot_mtx_assembly_data): plt.plot(x, d3_SpMV_ginkgo_asbly, label='Ginkgo assembly')
@@ -132,6 +133,7 @@ if(plot_SpMV_d3_only):
     if(plot_with_logarithmic_scale):
         plt.yscale('log')
     plt.show()
+'''
 
 
 
@@ -181,9 +183,9 @@ perNNZ=""
 if(plot_per_mtx_entry):
     perNNZ= " per NNZ"
 axis[0,0].set_title("d=2 average time to generate sparse matrix"+perNNZ)
-axis[1,0].set_title("d=2 average time to calculate SpMV")
-axis[0,1].set_title("d=3 average time to generate sparse matrix")
-axis[1,1].set_title("d=3 average time to calculate SpMV")
+axis[1,0].set_title("d=2 average time to calculate SpMV"+perNNZ)
+axis[0,1].set_title("d=3 average time to generate sparse matrix"+perNNZ)
+axis[1,1].set_title("d=3 average time to calculate SpMV"+perNNZ)
 
 
 
