@@ -86,38 +86,38 @@ devisors_2D = getDevisors(2,n_max,plot_per_mtx_entry)
 devisors_3D = getDevisors(3,n_max,plot_per_mtx_entry)
 
 print(x)
-d2_gen_istl = [ISTL_data[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_istl = [ISTL_data[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_istl = [ISTL_data[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_istl = [ISTL_data[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_istl = [ISTL_data[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_istl = [ISTL_data[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_istl = [ISTL_data[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_istl = [ISTL_data[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
-d2_gen_ginkgo_asbly = [GINKGO_data_assembly[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_ginkgo_asbly = [GINKGO_data_assembly[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
-d2_gen_ginkgo_csr = [GINKGO_data_csr[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_ginkgo_csr = [GINKGO_data_csr[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_ginkgo_csr = [GINKGO_data_csr[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_ginkgo_csr = [GINKGO_data_csr[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
-d2_gen_ginkgo_ell = [GINKGO_data_ell[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_ginkgo_ell = [GINKGO_data_ell[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_ginkgo_ell = [GINKGO_data_ell[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_ginkgo_ell = [GINKGO_data_ell[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
-d2_gen_ginkgo_omp = [GINKGO_data_omp_csr[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_ginkgo_omp = [GINKGO_data_omp_csr[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
-d2_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][2]/devisors_2D[n] for n in x] 
-d2_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][3]/devisors_2D[n] for n in x] 
-d3_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][2]/devisors_3D[n] for n in x] 
-d3_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][3]/devisors_3D[n] for n in x] 
+d2_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
+d2_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
+d3_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
+d3_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
 
 # analysis plot data
-#d3_SPMV_diff_ISTL_gko = [(GINKGO_data_assembly[n_max+n-1][3] - ISTL_data[n_max+n-1][3]) for n in x]
+#d3_SPMV_diff_ISTL_gko = [(GINKGO_data_assembly[n_max+n-1][3] - ISTL_data[n_max+n-1][3]) for n in range(1,n_max+1)]
 
 # single plot
 '''
