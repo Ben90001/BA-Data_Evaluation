@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
+import os
 
-# 1. Retrieve data from files
-# 2. splitting data 4 parts: d2/d3 and generation/SpMV
-# 3. sort them into respective plots(&lable&color)
+# 1. Retrieve data from files & average them
+# 2. transform data for each file in 4 plotable parts: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
+# 3. sort them into respective plots & decide which ones to plot
 
 def getData(filename,rounds,n_max):
     # import data
@@ -14,8 +15,6 @@ def getData(filename,rounds,n_max):
             data.append(row)
     print(filename+": Data size: "+str(len(data)))
     return data
-
-
 def getAverageData(filename,rounds,n_max):
     data = getData(filename,rounds,n_max)
     average_data = []
@@ -49,19 +48,36 @@ def getDevisors(dim, n_upperBound, plot_per_mtx_entry):
         return devisors
     raise ValueError(f"Invalid value for: {dim}")
 
+#returns plotable arrays: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
+def getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_upperBound):
+    plotData = [ \
+        [data[n-1][2]/devisors_2D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
+        [data[n-1][3]/devisors_2D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
+        [data[n_upperBound+n-1][2]/devisors_3D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
+        [data[n_upperBound+n-1][3]/devisors_3D[n] for n in range(plotStartingPoint_n, n_upperBound+1)] \
+    ]
+    return plotData
+
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
-rounds = 5
-n_max = 200
 
-# different matrix formats (gko,ref,mtx_data)
-plot_csr = True
-plot_ell = True
-# different assembly datastructure
-plot_mtx_assembly_data = False
-plot_mtx_assembly_data_setOnly = False
-# parallel
+folder_string = "./results/400-4/"
+# set to 1 to display all
+plotStartingPoint_n = 20
+
+# executor
+plot_istl = True
+plot_ref = True
 plot_omp = False
+
+# different matrix formats (gko,mtx_data)
+plot_csr = True
+plot_ell = False
+plot_coo = False
+
+# different assembly datastructure
+#plot_gpu_mtx_data = True
+#plot_gpu_mtx_data_setOnly = True
 
 plot_with_logarithmic_scale = True
 plot_per_mtx_entry = True
@@ -70,117 +86,48 @@ plot_per_mtx_entry = True
 plot_SpMV_d3_only = False
 #-----------------------------------------------------------------------------------------------------------------------------
 
-# note: assembly referes to "matrix_assemlby_data" vs. "matrix_data" classe used to assembly the matrix in ginkgo
-folder_string = "./results/200-5/"
-ISTL_data = getAverageData(folder_string+'results_ISTL.txt',rounds,n_max)
-GINKGO_data_assembly = getAverageData(folder_string+'results_ginkgo_mtx-assembly-data__reference_csr.txt',rounds,n_max)
-GINKGO_data_csr = getAverageData(folder_string+'results_ginkgo_mtx-data__reference_csr.txt',rounds,n_max)
-GINKGO_data_ell = getAverageData(folder_string+'results_ginkgo_mtx-data_reference_ell.txt',rounds,n_max)
-GINKGO_data_omp_csr = getAverageData(folder_string+'results_gko_mtx-data_omp_csr.txt',rounds,n_max)
-GINKGO_data_assembly_setOnly = getAverageData(folder_string+'results_gko_mtx-assembly-data_ref_csr__set-value-only_diff-mtx-instantiation.txt',rounds,n_max)
+#extract n_upperBound and rounds
+n_max, rounds = map(int, folder_string[len("./results/"):-1].split('-'))
 
-# plain average plot data
-x = list(range(1, n_max+1))
+# get file names (exclude folders and hidden files)
+filenames = [file \
+             for file in os.listdir(folder_string) \
+             if os.path.isfile(folder_string+file) and not file.startswith('.')]
+filenames.sort()
+print(filenames)
 
+# file -> rawData
+rawData = [getAverageData(folder_string+file,rounds,n_max) for file in filenames]
+
+# rawData -> plotData
+x = list(range(plotStartingPoint_n, n_max+1))
 devisors_2D = getDevisors(2,n_max,plot_per_mtx_entry)
 devisors_3D = getDevisors(3,n_max,plot_per_mtx_entry)
+plotData = [getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_max) for data in rawData]
 
 print(x)
-d2_gen_istl = [ISTL_data[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_istl = [ISTL_data[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_istl = [ISTL_data[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_istl = [ISTL_data[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-d2_gen_ginkgo_asbly = [GINKGO_data_assembly[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_ginkgo_asbly = [GINKGO_data_assembly[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-d2_gen_ginkgo_csr = [GINKGO_data_csr[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_ginkgo_csr = [GINKGO_data_csr[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_ginkgo_csr = [GINKGO_data_csr[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-d2_gen_ginkgo_ell = [GINKGO_data_ell[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_ginkgo_ell = [GINKGO_data_ell[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_ginkgo_ell = [GINKGO_data_ell[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-d2_gen_ginkgo_omp = [GINKGO_data_omp_csr[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_ginkgo_omp = [GINKGO_data_omp_csr[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-d2_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][2]/devisors_2D[n] for n in range(1,n_max+1)] 
-d2_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n-1][3]/devisors_2D[n] for n in range(1,n_max+1)] 
-d3_gen_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][2]/devisors_3D[n] for n in range(1,n_max+1)] 
-d3_SpMV_ginkgo_asbly_sO = [GINKGO_data_assembly_setOnly[n_max+n-1][3]/devisors_3D[n] for n in range(1,n_max+1)] 
-
-# analysis plot data
-#d3_SPMV_diff_ISTL_gko = [(GINKGO_data_assembly[n_max+n-1][3] - ISTL_data[n_max+n-1][3]) for n in range(1,n_max+1)]
-
-# single plot
-'''
-if(plot_SpMV_d3_only):
-    if(plot_csr): plt.plot(x, d3_SpMV_ginkgo_csr, label='Ginkgo')
-    if(plot_mtx_assembly_data): plt.plot(x, d3_SpMV_ginkgo_asbly, label='Ginkgo assembly')
-    plt.plot(x, d3_SpMV_istl, label='ISTL')
-    #plt.plot(x, d3_SPMV_diff_ISTL_gko, label='Ginkgo(asbly)-ISTL', color='red')
-    plt.xlabel('n values')
-    plt.ylabel('time in nanoseconds')
-    plt.title('d=3 SpMV: Average Times of '+str(rounds)+' rounds')
-    plt.legend()
-    if(plot_with_logarithmic_scale):
-        plt.yscale('log')
-    plt.show()
-'''
 
 
-
+# Add Data to Plots
 figure, axis = plt.subplots(2, 2)
-# plain results
-# ISTL
-axis[0,0].plot(x, d2_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[1,0].plot(x, d2_SpMV_istl, color='blue', alpha=1, label='ISTL')
-axis[0,1].plot(x, d3_gen_istl, color='blue', alpha=1, label='ISTL')
-axis[1,1].plot(x, d3_SpMV_istl, color='blue', alpha=1, label='ISTL')
-# gko mtx_assembly_data
-if(plot_mtx_assembly_data):
-    axis[0,0].plot(x, d2_gen_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
-    axis[1,0].plot(x, d2_SpMV_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
-    axis[0,1].plot(x, d3_gen_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
-    axis[1,1].plot(x, d3_SpMV_ginkgo_asbly, color='red', alpha=1, label='gko mtx_assembly_data')
-# gko mtx-assembly-data using setValue only (no addValue)
-if(plot_mtx_assembly_data_setOnly):
-    axis[0,0].plot(x, d2_gen_ginkgo_asbly_sO, color='skyblue', alpha=1, label='gko mtx_assembly_data 2')
-    axis[1,0].plot(x, d2_SpMV_ginkgo_asbly_sO, color='skyblue', alpha=1, label='gko mtx_assembly_data 2')
-    axis[0,1].plot(x, d3_gen_ginkgo_asbly_sO, color='skyblue', alpha=1, label='gko mtx_assembly_data 2')
-    axis[1,1].plot(x, d3_SpMV_ginkgo_asbly_sO, color='skyblue', alpha=1, label='gko mtx_assembly_data 2')
-# gko Csr
-if(plot_csr):
-    axis[0,0].plot(x, d2_gen_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
-    axis[1,0].plot(x, d2_SpMV_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
-    axis[0,1].plot(x, d3_gen_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
-    axis[1,1].plot(x, d3_SpMV_ginkgo_csr, color='brown', alpha=1, label='gko Csr')
-# gko Ell
-if(plot_ell):
-    axis[0,0].plot(x, d2_gen_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
-    axis[1,0].plot(x, d2_SpMV_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
-    axis[0,1].plot(x, d3_gen_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
-    axis[1,1].plot(x, d3_SpMV_ginkgo_ell, color='grey', alpha=1, label='gko Ell')
-# gko omp
-if(plot_omp):
-    axis[0,0].plot(x, d2_gen_ginkgo_omp, color='purple', alpha=1, label='gko omp')
-    axis[1,0].plot(x, d2_SpMV_ginkgo_omp, color='purple', alpha=1, label='gko omp')
-    axis[0,1].plot(x, d3_gen_ginkgo_omp, color='purple', alpha=1, label='gko omp')
-    axis[1,1].plot(x, d3_SpMV_ginkgo_omp, color='purple', alpha=1, label='gko omp')
+name = "no name assigned"
+for file in range(0,len(filenames)):
+    if(filenames[file][:4]=="ISTL"): name = filenames[file]
+    if(filenames[file][:3]=="gko"): name = filenames[file][:15]
+    if((not plot_ref) and name[8:11]=="ref"): continue
+    if((not plot_omp) and name[8:11]=="omp"): continue
+    if((not plot_csr) and name[12:15]=="csr"): continue
+    if((not plot_coo) and name[12:15]=="coo"): continue
+    if((not plot_ell) and name[12:15]=="ell"): continue
 
-
-
+    axis[0,0].plot(x, plotData[file][0], label=name) #color='blue'
+    axis[1,0].plot(x, plotData[file][1], label=name)
+    axis[0,1].plot(x, plotData[file][2], label=name)
+    axis[1,1].plot(x, plotData[file][3], label=name)
 
 # Set titles
 perNNZ=""
-if(plot_per_mtx_entry):
+if(plot_per_mtx_entry): 
     perNNZ= " per NNZ"
 axis[0,0].set_title("d=2 average time to generate sparse matrix"+perNNZ)
 axis[1,0].set_title("d=2 average time to calculate SpMV"+perNNZ)
@@ -198,3 +145,22 @@ for ax in axis.flat:
 
 if(not plot_SpMV_d3_only):
     plt.show()
+
+
+
+
+# single plot
+'''
+if(plot_SpMV_d3_only):
+    if(plot_csr): plt.plot(x, d3_SpMV_ginkgo_csr, label='Ginkgo')
+    if(plot_mtx_assembly_data): plt.plot(x, d3_SpMV_ginkgo_asbly, label='Ginkgo assembly')
+    plt.plot(x, d3_SpMV_istl, label='ISTL')
+    #plt.plot(x, d3_SPMV_diff_ISTL_gko, label='Ginkgo(asbly)-ISTL', color='red')
+    plt.xlabel('n values')
+    plt.ylabel('time in nanoseconds')
+    plt.title('d=3 SpMV: Average Times of '+str(rounds)+' rounds')
+    plt.legend()
+    if(plot_with_logarithmic_scale):
+        plt.yscale('log')
+    plt.show()
+'''
