@@ -1,4 +1,4 @@
-def sizeCalculation(n,d,x,y,data_string):
+def sizeCalculation_bit(n,d,x,y,data_string):
     if(data_string=="xN"):
         N = 1
         for i in range(0,d):
@@ -10,10 +10,11 @@ def sizeCalculation(n,d,x,y,data_string):
             N *= n
         return (x*N+y)*64
     if(data_string=="Mtx+Vec"):
-        N = 1
-        for i in range(0,d):
-            N *= n
-        return (2*(N*(2*d+1))+N)*64 + N*64
+        N = pow(n,d)
+        if(d==3): return (7*N -2*n*n -2*n -2)*64
+        if(d==2): return (5*N -2*n -2)*64
+    if(data_string=="xn^2+yn+z"): #part of x vector needed per yi calc (+row of A)
+        return (x*n*n+y*n+z)*64
     
     raise ValueError("sizeCalculation: data_string unknown")
     
@@ -29,10 +30,12 @@ n_lowerBound = 1
 n_upperBound = 4000 # bit-scale works at least until n=2000 correctly with d=3 
 d = 3
 
-# this can be: "xN","xN+y","Mtx+Vec"
+# this can be: "xN","xN+y","Mtx+Vec", "xn^2+yn+z"
 data_string = "Mtx+Vec"    # number of elemets with each 64bit 
-x=1
-y=(2*d+1)*3
+x=2
+y=0
+z=(2*d+1)
+#y=(2*d+1)*3
 
 # values to exceed 
     # L1 and L2 distributed across 64 cores 
@@ -52,7 +55,7 @@ L2_exceeded = False
 L3_exceeded = False
 RAM_exceeded = False
 for n in range(n_lowerBound,n_upperBound+1):
-    dataSize = sizeCalculation(n,d,x,y,data_string)
+    dataSize = sizeCalculation_bit(n,d,x,y,data_string)/8
     #print(str(dataSize))
     if((dataSize>L1_size_bit) and not L1_exceeded):
         L1_exceeded = True

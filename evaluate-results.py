@@ -33,22 +33,31 @@ def getAverageData(filename,rounds,n_max):
     print('\n')
     return average_data
 
+def getNNZ(dim, n):
+    if(dim==2):
+        return 5*pow(n,dim) -2*n -2
+    if(dim==3):
+        return 7*pow(n,dim) -2*n*n -2*n -2
+    raise ValueError(f"Invalid value for: {dim}")
+def getN(dim,n):    
+    return pow(n,dim)
 
-def getDevisors(dim, n_upperBound, plot_per_mtx_entry):
-    if(not plot_per_mtx_entry):
+
+def getDevisors(dim, n_upperBound, plot_per_devisor):
+    if(plot_per_devisor=="no"):
         return [1]*(n_upperBound+1)
     devisors = list(range(0, n_upperBound+1))
-    if(dim==2):
+    if(plot_per_devisor=="nnz"):
         for n in range(1, n_upperBound+1):
-            devisors[n]= 5*pow(n,dim) -2*n -2
+            devisors[n]= getNNZ(dim, n)
         return devisors
-    elif(dim==3):
+    if(plot_per_devisor=="N"):
         for n in range(1, n_upperBound+1):
-            devisors[n]= 7*pow(n,dim) -2*n*n -2*n -2
+            devisors[n]= pow(n,dim)
         return devisors
     raise ValueError(f"Invalid value for: {dim}")
 
-#returns plotable arrays: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
+#returns plotable y-values: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
 def getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_upperBound):
     plotData = [ \
         [data[n-1][2]/devisors_2D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
@@ -58,12 +67,22 @@ def getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_upperBound):
     ]
     return plotData
 
+def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
+    x = list(range(plotStartingPoint_n,n_max+1))
+    if(measuring_unit_x == "n"):
+        return x
+    if(measuring_unit_x == "mtx+vec in Bytes"):
+        for n in x:
+            x[n-plotStartingPoint_n] = (getNNZ(dim,n) + pow(n,dim)) * 8
+        return x
+    
+
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
 
 folder_string = "./results/400-4/"
 # set to 1 to display all
-plotStartingPoint_n = 20
+plotStartingPoint_n = 15
 
 # executor
 plot_istl = True
@@ -75,12 +94,21 @@ plot_csr = True
 plot_ell = False
 plot_coo = False
 
-# different assembly datastructure
-#plot_gpu_mtx_data = True
-#plot_gpu_mtx_data_setOnly = True
+# x-axis
+# possible values: "n", "mtx+vec in Bytes"
+measuring_unit_x = "mtx+vec in Bytes"
+# possible values: "no","nnz","N"
+plot_per_devisor = "nnz"
+plot_y_log = False
+plot_x_log = True
+markersize = True
 
-plot_with_logarithmic_scale = True
-plot_per_mtx_entry = True
+plot_cache_sizes = True
+# Kib -> B
+L1_size_byte = 32 * 1024 /8    # additional 32 for instructions
+L2_size_byte = 512 * 1024 /8
+L3_size_byte = 32768 * 1024 /8 # = 32MiB
+RAM_size_byte = 534359343104    # free -b | grep Mem | awk '{print $7}'
 
 
 plot_SpMV_d3_only = False
@@ -94,25 +122,28 @@ filenames = [file \
              for file in os.listdir(folder_string) \
              if os.path.isfile(folder_string+file) and not file.startswith('.')]
 filenames.sort()
-print(filenames)
 
 # file -> rawData
 rawData = [getAverageData(folder_string+file,rounds,n_max) for file in filenames]
 
-# rawData -> plotData
-x = list(range(plotStartingPoint_n, n_max+1))
-devisors_2D = getDevisors(2,n_max,plot_per_mtx_entry)
-devisors_3D = getDevisors(3,n_max,plot_per_mtx_entry)
+# awDaxta -> plotData
+x_3D = getXValues(3,plotStartingPoint_n,n_max,measuring_unit_x)
+x_2D = getXValues(2,plotStartingPoint_n,n_max,measuring_unit_x)
+devisors_2D = getDevisors(2,n_max,plot_per_devisor)
+devisors_3D = getDevisors(3,n_max,plot_per_devisor)
+
 plotData = [getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_max) for data in rawData]
 
-print(x)
+print(x_3D)
 
 
 # Add Data to Plots
 figure, axis = plt.subplots(2, 2)
 name = "no name assigned"
 for file in range(0,len(filenames)):
-    if(filenames[file][:4]=="ISTL"): name = filenames[file]
+    if(filenames[file][:4]=="ISTL"): 
+        name = filenames[file]
+        if(not plot_istl): continue
     if(filenames[file][:3]=="gko"): name = filenames[file][:15]
     if((not plot_ref) and name[8:11]=="ref"): continue
     if((not plot_omp) and name[8:11]=="omp"): continue
@@ -120,47 +151,33 @@ for file in range(0,len(filenames)):
     if((not plot_coo) and name[12:15]=="coo"): continue
     if((not plot_ell) and name[12:15]=="ell"): continue
 
-    axis[0,0].plot(x, plotData[file][0], label=name) #color='blue'
-    axis[1,0].plot(x, plotData[file][1], label=name)
-    axis[0,1].plot(x, plotData[file][2], label=name)
-    axis[1,1].plot(x, plotData[file][3], label=name)
+    axis[0,0].plot(x_2D, plotData[file][0], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
+    axis[1,0].plot(x_2D, plotData[file][1], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
+    axis[0,1].plot(x_3D, plotData[file][2], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
+    axis[1,1].plot(x_3D, plotData[file][3], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
 
 # Set titles
-perNNZ=""
-if(plot_per_mtx_entry): 
-    perNNZ= " per NNZ"
-axis[0,0].set_title("d=2 average time to generate sparse matrix"+perNNZ)
-axis[1,0].set_title("d=2 average time to calculate SpMV"+perNNZ)
-axis[0,1].set_title("d=3 average time to generate sparse matrix"+perNNZ)
-axis[1,1].set_title("d=3 average time to calculate SpMV"+perNNZ)
+perDiv=""
+if(plot_per_devisor=="nnz"): perDiv= " per NNZ"
+if(plot_per_devisor=="N"): perDiv= " per N"
+axis[0,0].set_title("d=2 average time to generate sparse matrix"+perDiv)
+axis[1,0].set_title("d=2 average time to calculate SpMV"+perDiv)
+axis[0,1].set_title("d=3 average time to generate sparse matrix"+perDiv)
+axis[1,1].set_title("d=3 average time to calculate SpMV"+perDiv)
 
 
 
 for ax in axis.flat:
-    ax.set_xlabel('n values')
+    ax.set_xlabel(measuring_unit_x)
     ax.set_ylabel('time in nanoseconds')
     ax.legend()
-    if(plot_with_logarithmic_scale):
-        ax.set_yscale('log')
+    if(plot_y_log): ax.set_yscale('log')
+    if(plot_x_log): ax.set_xscale('log')
+    if(plot_cache_sizes):
+        ax.axvline(x=L1_size_byte, color="grey", linestyle='--')
+        ax.axvline(x=L2_size_byte, color="grey", linestyle='--')
+        ax.axvline(x=L3_size_byte, color="grey", linestyle='--')
+        ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
 
 if(not plot_SpMV_d3_only):
     plt.show()
-
-
-
-
-# single plot
-'''
-if(plot_SpMV_d3_only):
-    if(plot_csr): plt.plot(x, d3_SpMV_ginkgo_csr, label='Ginkgo')
-    if(plot_mtx_assembly_data): plt.plot(x, d3_SpMV_ginkgo_asbly, label='Ginkgo assembly')
-    plt.plot(x, d3_SpMV_istl, label='ISTL')
-    #plt.plot(x, d3_SPMV_diff_ISTL_gko, label='Ginkgo(asbly)-ISTL', color='red')
-    plt.xlabel('n values')
-    plt.ylabel('time in nanoseconds')
-    plt.title('d=3 SpMV: Average Times of '+str(rounds)+' rounds')
-    plt.legend()
-    if(plot_with_logarithmic_scale):
-        plt.yscale('log')
-    plt.show()
-'''

@@ -1,0 +1,4 @@
+Script execution started at: Thu Oct 10 04:30:25 PM CEST 2024
+Finished ISTL at         Thu Oct 10 05:56:42 PM CEST 2024
+Finished with executor: ref, matrix format: csr at      Fri Oct 11 01:30:24 AM CEST 2024
+Script execution ended at: Fri Oct 11 01:30:24 AM CEST 2024
