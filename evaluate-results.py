@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import os
+import statistics
 
 # 1. Retrieve data from files & average them
 # 2. transform data for each file in 4 plotable parts: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
@@ -32,6 +33,23 @@ def getAverageData(filename,rounds,n_max):
     print(filename+": Cleaned data size: "+ str(len(average_data)))
     print('\n')
     return average_data
+def getMedianData(filename,rounds,n_max):
+    data = getData(filename,rounds,n_max)
+    mean_data = []
+    for i in range(len(data)):
+        if(i%rounds==0):
+            time_to_gen = []
+            time_to_SpMV = []
+            j=1
+            for j in range(0,rounds):
+                time_to_gen.append(data[i+j][3])
+                time_to_SpMV.append(data[i+j][4])
+            mean_time_to_gen = statistics.median(time_to_gen)
+            mean_time_to_SpMV = statistics.median(time_to_SpMV)
+            mean_data.append([data[i][0],data[i][1],mean_time_to_gen,mean_time_to_SpMV])
+    print(filename+": Cleaned data size: "+ str(len(mean_data)))
+    print('\n')
+    return mean_data
 
 def getNNZ(dim, n):
     if(dim==2):
@@ -82,37 +100,39 @@ def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
 
 folder_string = "./results/400-4/"
 # set to 1 to display all
-plotStartingPoint_n = 15
+plotStartingPoint_n = 8
 
 # executor
 plot_istl = True
 plot_ref = True
 plot_omp = False
+plot_cuda = False
 
 # different matrix formats (gko,mtx_data)
 plot_csr = True
-plot_ell = False
-plot_coo = False
+plot_ell = True
+plot_coo = True
 
 # x-axis
 # possible values: "n", "mtx+vec in Bytes"
-measuring_unit_x = "mtx+vec in Bytes"
+measuring_unit_x = "n"#"mtx+vec in Bytes"
 # possible values: "no","nnz","N"
 plot_per_devisor = "nnz"
 plot_y_log = False
 plot_x_log = True
-markersize = True
+plot_marker = False
 
 plot_cache_sizes = True
+
+
+plot_SpMV_d3_only = False
+#-----------------------------------------------------------------------------------------------------------------------------
+
 # Kib -> B
 L1_size_byte = 32 * 1024 /8    # additional 32 for instructions
 L2_size_byte = 512 * 1024 /8
 L3_size_byte = 32768 * 1024 /8 # = 32MiB
 RAM_size_byte = 534359343104    # free -b | grep Mem | awk '{print $7}'
-
-
-plot_SpMV_d3_only = False
-#-----------------------------------------------------------------------------------------------------------------------------
 
 #extract n_upperBound and rounds
 n_max, rounds = map(int, folder_string[len("./results/"):-1].split('-'))
@@ -124,7 +144,8 @@ filenames = [file \
 filenames.sort()
 
 # file -> rawData
-rawData = [getAverageData(folder_string+file,rounds,n_max) for file in filenames]
+#rawData = [getAverageData(folder_string+file,rounds,n_max) for file in filenames]
+rawData = [getMedianData(folder_string+file,rounds,n_max) for file in filenames]
 
 # awDaxta -> plotData
 x_3D = getXValues(3,plotStartingPoint_n,n_max,measuring_unit_x)
@@ -147,14 +168,14 @@ for file in range(0,len(filenames)):
     if(filenames[file][:3]=="gko"): name = filenames[file][:15]
     if((not plot_ref) and name[8:11]=="ref"): continue
     if((not plot_omp) and name[8:11]=="omp"): continue
-    if((not plot_csr) and name[12:15]=="csr"): continue
-    if((not plot_coo) and name[12:15]=="coo"): continue
-    if((not plot_ell) and name[12:15]=="ell"): continue
-
-    axis[0,0].plot(x_2D, plotData[file][0], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
-    axis[1,0].plot(x_2D, plotData[file][1], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
-    axis[0,1].plot(x_3D, plotData[file][2], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
-    axis[1,1].plot(x_3D, plotData[file][3], label=name, marker='s', markerfacecolor='none', markersize=markersize*3)
+    if((not plot_cuda) and name[8:12]=="cuda"): continue
+    if((not plot_csr) and (name[12:15]=="csr" or name[13:16]=="csr")): continue
+    if((not plot_coo) and (name[12:15]=="coo" or name[13:16]=="coo")): continue
+    if((not plot_ell) and (name[12:15]=="ell" or name[13:16]=="ell")): continue
+    axis[0,0].plot(x_2D, plotData[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[1,0].plot(x_2D, plotData[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[0,1].plot(x_3D, plotData[file][2], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[1,1].plot(x_3D, plotData[file][3], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
 
 # Set titles
 perDiv=""

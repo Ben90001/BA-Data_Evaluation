@@ -15,6 +15,9 @@ def sizeCalculation_bit(n,d,x,y,data_string):
         if(d==2): return (5*N -2*n -2)*64
     if(data_string=="xn^2+yn+z"): #part of x vector needed per yi calc (+row of A)
         return (x*n*n+y*n+z)*64
+    if(data_string=="layerCond_3d"): 
+        return (2*n*n + 2*d+1 +1)*64
+            #x-part + A-row + yi
     
     raise ValueError("sizeCalculation: data_string unknown")
     
@@ -30,8 +33,8 @@ n_lowerBound = 1
 n_upperBound = 4000 # bit-scale works at least until n=2000 correctly with d=3 
 d = 3
 
-# this can be: "xN","xN+y","Mtx+Vec", "xn^2+yn+z"
-data_string = "Mtx+Vec"    # number of elemets with each 64bit 
+# this can be: "xN","xN+y","Mtx+Vec", "xn^2+yn+z" "layerCond_3d"
+data_string = "layerCond_3d"#"Mtx+Vec"    # number of elemets with each 64bit 
 x=2
 y=0
 z=(2*d+1)
@@ -55,7 +58,7 @@ L2_exceeded = False
 L3_exceeded = False
 RAM_exceeded = False
 for n in range(n_lowerBound,n_upperBound+1):
-    dataSize = sizeCalculation_bit(n,d,x,y,data_string)/8
+    dataSize = sizeCalculation_bit(n,d,x,y,data_string)
     #print(str(dataSize))
     if((dataSize>L1_size_bit) and not L1_exceeded):
         L1_exceeded = True

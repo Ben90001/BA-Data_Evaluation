@@ -1,0 +1,4 @@
+Script execution started at: Wed Oct 23 01:47:29 PM CEST 2024
+Finished with executor: cuda, matrix format: csr at      Tue Oct 29 06:11:12 PM CET 2024
+Finished with executor: cuda, matrix format: csr at      Wed Oct 30 03:21:53 AM CET 2024
+Script execution ended at: Wed Oct 30 03:21:53 AM CET 2024
