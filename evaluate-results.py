@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 import os
 import statistics
+from collections import defaultdict
 
-# 1. Retrieve data from files & average them
+# 1. Retrieve data from files & process(e.g. average) them
 # 2. transform data for each file in 4 plotable parts: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
 # 3. sort them into respective plots & decide which ones to plot
 
-def getData(filename,rounds,n_max):
+def getRawData(filename):
     # import data
     data = []
     with open(filename, 'r') as file:
@@ -16,46 +17,37 @@ def getData(filename,rounds,n_max):
             data.append(row)
     print(filename+": Data size: "+str(len(data)))
     return data
-def getAverageData(filename,rounds,n_max):
-    data = getData(filename,rounds,n_max)
-    average_data = []
-    for i in range(len(data)):
-        if(i%rounds==0):
-            sum_time_to_gen = 0
-            sum_time_to_SpMV = 0
-            j=1
-            for j in range(0,rounds):
-                sum_time_to_gen += data[i+j][3]
-                sum_time_to_SpMV += data[i+j][4]
-            average_time_to_gen = sum_time_to_gen/rounds
-            average_time_to_SpMV = sum_time_to_SpMV/rounds
-            average_data.append([data[i][0],data[i][1],average_time_to_gen,average_time_to_SpMV])
-    print(filename+": Cleaned data size: "+ str(len(average_data)))
+def getData(filename, data_type):
+    data = getRawData(filename)
+    #(n,dim) -> tuple-list of values
+    map = defaultdict(list)
+    for n, dim, round, gen_time, spmv_time in data: map[(n, dim)].append((gen_time, spmv_time))
+
+    processedValues = []
+    for (n, dim), values in map.items():
+        gen_times = [v[0] for v in values]
+        SpMV_times = [v[1] for v in values]
+        if(data_type == "average"):
+            processedValues.append([n,dim, statistics.mean(gen_times), statistics.mean(SpMV_times)])
+        elif(data_type == "median"):
+            processedValues.append([n,dim, statistics.median(gen_times), statistics.median(SpMV_times)])
+        elif(data_type == "max"):
+            processedValues.append([n,dim, max(gen_times), max(SpMV_times)])
+        elif(data_type == "min"):
+            processedValues.append([n,dim, min(gen_times), min(SpMV_times)])
+        else:
+            raise ValueError("data_type not not known")
+    print(filename+": Processed data size: "+ str(len(processedValues)))
     print('\n')
-    return average_data
-def getMedianData(filename,rounds,n_max):
-    data = getData(filename,rounds,n_max)
-    mean_data = []
-    for i in range(len(data)):
-        if(i%rounds==0):
-            time_to_gen = []
-            time_to_SpMV = []
-            j=1
-            for j in range(0,rounds):
-                time_to_gen.append(data[i+j][3])
-                time_to_SpMV.append(data[i+j][4])
-            mean_time_to_gen = statistics.median(time_to_gen)
-            mean_time_to_SpMV = statistics.median(time_to_SpMV)
-            mean_data.append([data[i][0],data[i][1],mean_time_to_gen,mean_time_to_SpMV])
-    print(filename+": Cleaned data size: "+ str(len(mean_data)))
-    print('\n')
-    return mean_data
+    return processedValues
 
 def getNNZ(dim, n):
     if(dim==2):
-        return 5*pow(n,dim) -2*n -2
+        #old : return 5*pow(n,dim) -2*n -2
+        return 5*n*n - 4*n
     if(dim==3):
-        return 7*pow(n,dim) -2*n*n -2*n -2
+        #old : return 7*pow(n,dim) -2*n*n -2*n -2
+        return 7*n*n*n - 6*n*n
     raise ValueError(f"Invalid value for: {dim}")
 def getN(dim,n):    
     return pow(n,dim)
@@ -89,9 +81,17 @@ def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
     x = list(range(plotStartingPoint_n,n_max+1))
     if(measuring_unit_x == "n"):
         return x
+    if(measuring_unit_x == "mtx in Bytes"):
+        for n in x:
+            x[n-plotStartingPoint_n] = getNNZ(dim,n) * 8
+        return x
     if(measuring_unit_x == "mtx+vec in Bytes"):
         for n in x:
             x[n-plotStartingPoint_n] = (getNNZ(dim,n) + pow(n,dim)) * 8
+        return x
+    if(measuring_unit_x == "mtx+2vec in Bytes"):
+        for n in x:
+            x[n-plotStartingPoint_n] = (getNNZ(dim,n) + 2*pow(n,dim)) * 8
         return x
     
 
@@ -99,7 +99,7 @@ def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
 #-----------------------------------------------------------------------------------------------------------------------------
 
 folder_string = "./results/400-4/"
-# set to 1 to display all
+data_type = "average" # "median" "max" "min"
 plotStartingPoint_n = 8
 
 # executor
@@ -111,18 +111,21 @@ plot_cuda = False
 # different matrix formats (gko,mtx_data)
 plot_csr = True
 plot_ell = True
-plot_coo = True
+plot_coo = False
+
+plot_cache_sizes = True
+plot_RAM_size = True
 
 # x-axis
-# possible values: "n", "mtx+vec in Bytes"
-measuring_unit_x = "n"#"mtx+vec in Bytes"
+# possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
+measuring_unit_x = "mtx in Bytes"
 # possible values: "no","nnz","N"
-plot_per_devisor = "nnz"
-plot_y_log = False
+plot_per_devisor = "nnz" #"no"
+plot_y_log = True
 plot_x_log = True
 plot_marker = False
 
-plot_cache_sizes = True
+
 
 
 plot_SpMV_d3_only = False
@@ -144,8 +147,7 @@ filenames = [file \
 filenames.sort()
 
 # file -> rawData
-#rawData = [getAverageData(folder_string+file,rounds,n_max) for file in filenames]
-rawData = [getMedianData(folder_string+file,rounds,n_max) for file in filenames]
+rawData = [getData(folder_string+file,data_type) for file in filenames]
 
 # awDaxta -> plotData
 x_3D = getXValues(3,plotStartingPoint_n,n_max,measuring_unit_x)
@@ -195,10 +197,10 @@ for ax in axis.flat:
     if(plot_y_log): ax.set_yscale('log')
     if(plot_x_log): ax.set_xscale('log')
     if(plot_cache_sizes):
-        ax.axvline(x=L1_size_byte, color="grey", linestyle='--')
-        ax.axvline(x=L2_size_byte, color="grey", linestyle='--')
+        ax.axvline(x=L1_size_byte, color="grey", linestyle=':')
+        ax.axvline(x=L2_size_byte, color="grey", linestyle='-.')
         ax.axvline(x=L3_size_byte, color="grey", linestyle='--')
-        ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
+    if(plot_RAM_size): ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
 
 if(not plot_SpMV_d3_only):
     plt.show()
