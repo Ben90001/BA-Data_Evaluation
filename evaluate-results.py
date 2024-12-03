@@ -23,30 +23,40 @@ def getData(filename, data_type):
     map = defaultdict(list)
     for n, dim, round, gen_time, spmv_time in data: map[(n, dim)].append((gen_time, spmv_time))
 
-    processedValues = []
+    processedValues2D = []
+    processedValues3D = []
+
     for (n, dim), values in map.items():
         gen_times = [v[0] for v in values]
         SpMV_times = [v[1] for v in values]
+        processedValue = []
         if(data_type == "average"):
-            processedValues.append([n,dim, statistics.mean(gen_times), statistics.mean(SpMV_times)])
+            processedValue = [n,dim, statistics.mean(gen_times), statistics.mean(SpMV_times)]
         elif(data_type == "median"):
-            processedValues.append([n,dim, statistics.median(gen_times), statistics.median(SpMV_times)])
+            processedValue = [n,dim, statistics.median(gen_times), statistics.median(SpMV_times)]
         elif(data_type == "max"):
-            processedValues.append([n,dim, max(gen_times), max(SpMV_times)])
+            processedValue = [n,dim, max(gen_times), max(SpMV_times)]
         elif(data_type == "min"):
-            processedValues.append([n,dim, min(gen_times), min(SpMV_times)])
+            processedValue = [n,dim, min(gen_times), min(SpMV_times)]
         else:
             raise ValueError("data_type not not known")
-    print(filename+": Processed data size: "+ str(len(processedValues)))
+        if dim == 2:
+            processedValues2D.append(processedValue)
+        elif dim == 3:
+            processedValues3D.append(processedValue)
+    
+    processedValues2D.sort(key=lambda x: x[0])
+    processedValues3D.sort(key=lambda x: x[0])
+    print(filename+": Processed data size: "+ str(len(processedValues2D))+" and "+ str(len(processedValues3D)))
     print('\n')
-    return processedValues
+    return (processedValues2D,processedValues3D)
 
 def getNNZ(dim, n):
     if(dim==2):
         #old : return 5*pow(n,dim) -2*n -2
         return 5*n*n - 4*n
     if(dim==3):
-        #old : return 7*pow(n,dim) -2*n*n -2*n -2
+        #old : return 7*pow(n,dim)
         return 7*n*n*n - 6*n*n
     raise ValueError(f"Invalid value for: {dim}")
 def getN(dim,n):    
@@ -67,31 +77,45 @@ def getDevisors(dim, n_upperBound, plot_per_devisor):
         return devisors
     raise ValueError(f"Invalid value for: {dim}")
 
-#returns plotable y-values: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
-def getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_upperBound):
-    plotData = [ \
-        [data[n-1][2]/devisors_2D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
-        [data[n-1][3]/devisors_2D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
-        [data[n_upperBound+n-1][2]/devisors_3D[n] for n in range(plotStartingPoint_n, n_upperBound+1)], \
-        [data[n_upperBound+n-1][3]/devisors_3D[n] for n in range(plotStartingPoint_n, n_upperBound+1)] \
-    ]
-    return plotData
+#   data [x][0] = n
+#   data [x][1] = dim
+#   data [x][2] = gen_time
+#   data [x][3] = SpMV_time
+# returns plotable y-values: 2D_Gen,2D_SpMV,3D_Gen,3D_SpMV
+def getPlotData(data,devisors,n_max):
+    SpMV_data = []
+    gen_data = []
 
-def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
-    x = list(range(plotStartingPoint_n,n_max+1))
+    #index of next datapoint
+    i=0 
+    # ignoring all datapoints below plotstart
+    while(data[i][0]< plotStartingPoint_n and i+1<len(data)):i+=1
+
+    for n in range(1,n_max+1):
+        if n == data[i][0]:
+            SpMV_data.append(data[i][2]/devisors[n])
+            gen_data.append(data[i][3]/devisors[n])
+            if(i+1<len(data)): i+=1
+        else:
+            SpMV_data.append(None)
+            gen_data.append(None)
+    return [SpMV_data,gen_data]
+
+def getXValues(dim,n_values,plotStartingPoint_n,measuring_unit_x):
+    x= n_values
     if(measuring_unit_x == "n"):
         return x
     if(measuring_unit_x == "mtx in Bytes"):
         for n in x:
-            x[n-plotStartingPoint_n] = getNNZ(dim,n) * 8
+            x[n] = getNNZ(dim,n) * 8
         return x
     if(measuring_unit_x == "mtx+vec in Bytes"):
         for n in x:
-            x[n-plotStartingPoint_n] = (getNNZ(dim,n) + pow(n,dim)) * 8
+            x[n] = (getNNZ(dim,n) + pow(n,dim)) * 8
         return x
     if(measuring_unit_x == "mtx+2vec in Bytes"):
         for n in x:
-            x[n-plotStartingPoint_n] = (getNNZ(dim,n) + 2*pow(n,dim)) * 8
+            x[n] = (getNNZ(dim,n) + 2*pow(n,dim)) * 8
         return x
     
 
@@ -99,30 +123,41 @@ def getXValues(dim,plotStartingPoint_n,n_max,measuring_unit_x):
 #-----------------------------------------------------------------------------------------------------------------------------
 
 folder_string = "./results/400-4/"
-data_type = "average" # "median" "max" "min"
-plotStartingPoint_n = 8
+data_type = "median" # "average" "median" "max" "min"
+plotStartingPoint_n = 10
+
+plot_istl = True
+plot_gko = True
 
 # executor
-plot_istl = True
 plot_ref = True
 plot_omp = False
 plot_cuda = False
 
+# assembly data structure
+plot_cpu = True
+plot_gpu = False
+
 # different matrix formats (gko,mtx_data)
 plot_csr = True
-plot_ell = True
+plot_ell = False
 plot_coo = False
+plot_sellp = False
 
-plot_cache_sizes = True
-plot_RAM_size = True
+# special data
+plot_No2 = False
+
+plot_cache_sizes = False
+plot_RAM_size = False
+
 
 # x-axis
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
-measuring_unit_x = "mtx in Bytes"
+measuring_unit_x = "n"#"mtx in Bytes"
 # possible values: "no","nnz","N"
-plot_per_devisor = "nnz" #"no"
-plot_y_log = True
-plot_x_log = True
+plot_per_devisor = "no"
+plot_y_log = False
+plot_x_log = False
 plot_marker = False
 
 
@@ -146,16 +181,23 @@ filenames = [file \
              if os.path.isfile(folder_string+file) and not file.startswith('.')]
 filenames.sort()
 
-# file -> rawData
-rawData = [getData(folder_string+file,data_type) for file in filenames]
+# file -> processedData
+rawDatas= [getData(folder_string+file,data_type) for file in filenames]
+rawDatas2D = [file[0] for file in rawDatas]
+rawDatas3D = [file[1] for file in rawDatas]
 
-# awDaxta -> plotData
-x_3D = getXValues(3,plotStartingPoint_n,n_max,measuring_unit_x)
-x_2D = getXValues(2,plotStartingPoint_n,n_max,measuring_unit_x)
+# processedData -> plotData
+n_values = list(range(1, n_max+1))
+print("n_values"+ str(n_values))
+x_3D = getXValues(3,n_values, plotStartingPoint_n,measuring_unit_x)
+x_2D = getXValues(2,n_values,plotStartingPoint_n,measuring_unit_x)
 devisors_2D = getDevisors(2,n_max,plot_per_devisor)
 devisors_3D = getDevisors(3,n_max,plot_per_devisor)
 
-plotData = [getPlotData(data,devisors_2D,devisors_3D,plotStartingPoint_n,n_max) for data in rawData]
+plotData2D = [getPlotData(data,devisors_2D,n_max) for data in rawDatas2D]
+plotData3D = [getPlotData(data,devisors_3D,n_max) for data in rawDatas3D]
+print("plotData2D length: "+str(len(plotData2D[0][0]))+" "+str(len(plotData2D[0][1])))
+print("plotData2D length: "+str(len(plotData2D[1][0]))+" "+str(len(plotData2D[1][1])))
 
 print(x_3D)
 
@@ -164,30 +206,42 @@ print(x_3D)
 figure, axis = plt.subplots(2, 2)
 name = "no name assigned"
 for file in range(0,len(filenames)):
-    if(filenames[file][:4]=="ISTL"): 
-        name = filenames[file]
-        if(not plot_istl): continue
-    if(filenames[file][:3]=="gko"): name = filenames[file][:15]
-    if((not plot_ref) and name[8:11]=="ref"): continue
-    if((not plot_omp) and name[8:11]=="omp"): continue
-    if((not plot_cuda) and name[8:12]=="cuda"): continue
-    if((not plot_csr) and (name[12:15]=="csr" or name[13:16]=="csr")): continue
-    if((not plot_coo) and (name[12:15]=="coo" or name[13:16]=="coo")): continue
-    if((not plot_ell) and (name[12:15]=="ell" or name[13:16]=="ell")): continue
-    axis[0,0].plot(x_2D, plotData[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-    axis[1,0].plot(x_2D, plotData[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-    axis[0,1].plot(x_3D, plotData[file][2], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-    axis[1,1].plot(x_3D, plotData[file][3], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    name = filenames[file][:-4]
+    filename_components = name.split('_')
+    if(filename_components[0]=="ISTL" and not plot_istl): continue
+    if(filename_components[0] == "gko"): 
+        if not plot_gko: continue
+        if((not plot_cpu) and filename_components[1] == "cpu"): 
+            filename_components[1] = "c"
+            continue
+        if((not plot_gpu) and filename_components[1] == "gpu"): 
+            filename_components[1] = "g"
+            continue
+        if((not plot_ref) and filename_components[2] == "ref"): continue 
+        if((not plot_omp) and filename_components[2] == "omp"): continue 
+        if((not plot_cuda) and filename_components[2] == "cuda"): continue
+        if((not plot_csr) and filename_components[3] == "csr"): continue  
+        if((not plot_coo) and filename_components[3] == "coo"): continue 
+        if((not plot_ell) and filename_components[3] == "ell"): continue  
+        if((not plot_sellp) and filename_components[3] == "sellp"): continue  
+        del filename_components[4:7]
+    if(not plot_No2 and filename_components[-1]== "No2"): continue
+
+    name = '_'.join(filename_components)
+    axis[0,0].plot(x_2D, plotData2D[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[1,0].plot(x_2D, plotData2D[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[0,1].plot(x_3D, plotData3D[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+    axis[1,1].plot(x_3D, plotData3D[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+
 
 # Set titles
 perDiv=""
 if(plot_per_devisor=="nnz"): perDiv= " per NNZ"
 if(plot_per_devisor=="N"): perDiv= " per N"
-axis[0,0].set_title("d=2 average time to generate sparse matrix"+perDiv)
-axis[1,0].set_title("d=2 average time to calculate SpMV"+perDiv)
-axis[0,1].set_title("d=3 average time to generate sparse matrix"+perDiv)
-axis[1,1].set_title("d=3 average time to calculate SpMV"+perDiv)
-
+axis[0,0].set_title("d=2 "+data_type+" time to generate sparse matrix"+perDiv)
+axis[1,0].set_title("d=2 "+data_type+" time to calculate SpMV"+perDiv)
+axis[0,1].set_title("d=3 "+data_type+" time to generate sparse matrix"+perDiv)
+axis[1,1].set_title("d=3 "+data_type+" time to calculate SpMV"+perDiv)
 
 
 for ax in axis.flat:

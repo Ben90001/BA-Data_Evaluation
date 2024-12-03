@@ -1,0 +1,4 @@
+Script execution started at: Tue Nov 26 09:00:15 PM CET 2024
+Finished with executor: ref, matrix format: sellp at      Wed Nov 27 05:25:25 AM CET 2024
+Finished with executor: cuda, matrix format: sellp at      Wed Nov 27 01:42:56 PM CET 2024
+Script execution ended at: Wed Nov 27 01:42:56 PM CET 2024
