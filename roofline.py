@@ -1,34 +1,35 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-def plot_roofline(peak_flops, peak_mem_bw):
-    # Define the range of operational intensity
-    x = np.linspace(0, peak_mem_bw / 4, 100)  # Operational intensity (FLOPs/byte)
-    
-    # Roofline curves
-    flops_line = np.minimum(peak_flops, peak_mem_bw * x)  # Memory bandwidth limit
-    memory_line = np.full_like(x, peak_mem_bw)  # Peak memory bandwidth
-    
-    # Plotting the roofline
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, flops_line, label='Roofline (FLOPs)', color='blue')
-    plt.axhline(y=peak_mem_bw, color='red', linestyle='--', label='Peak Memory Bandwidth')
-    
+from value_calculations import *
+from evaluate_results import n_max
+dim =3
+if __name__ == "__main__":
+    arithmetic_intensity = np.linspace(0.01, 2, 100000)
+
+    n_values = list(range(1,n_max+1))
+    intensityValues = [getArithmeticIntnsity(n,dim) for n in n_values]
+    roofline_of_n = [np.minimum(peak_performance, intensityValues[n-1]*peak_sustainable_bandwidth)for n in n_values]
+    print("roofline_of_n: "+str(roofline_of_n))
+    # Roofline model
+    roofline = np.minimum(peak_performance, arithmetic_intensity*peak_sustainable_bandwidth)
+
+    # Plotting
+    plt.plot(arithmetic_intensity, roofline, label="Roofline Model", color='b')
+    plt.scatter(intensityValues,roofline_of_n)
+    plt.xscale('log')
+    plt.yscale('log')
+
+    for i, (intensityValues, roofline_of_n) in enumerate(zip(intensityValues, roofline_of_n)):
+        plt.text(intensityValues, roofline_of_n, n_values[i], fontsize=9, ha='right', color='blue')
+
+
     # Labels and title
-    #plt.xscale('log')
-    #plt.yscale('log')
-    #plt.xlim(1e-3, peak_mem_bw)
-    #plt.ylim(1e-3, peak_flops * 2)
-    plt.xlabel('Operational Intensity (FLOPs/Byte)')
-    plt.ylabel('Performance (FLOPs)')
+    plt.xlabel('Arithmetic Intensity (FLOPS/Byte)')
+    plt.ylabel('Performance (FLOPS/s)')
     plt.title('Roofline Model')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
+
     plt.show()
-
-# Example values for peak performance
-peak_flops = 1e12  # 1 TFLOP
-peak_mem_bw = 49333333333  # 49,3 GB/s
-
-plot_roofline(peak_flops, peak_mem_bw)
 
