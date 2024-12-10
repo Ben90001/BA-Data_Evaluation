@@ -10,3 +10,5 @@ n dim round_id time_to_gen time_to_SpMV
     rounds_min being the minimum rounds any of the experiments (n-dim-combinations) have been generated.
 3. move the log file into a directory, we dont want the code to try and plot it ;)
 
+NOTE: `cpu`/`gpu` referes to the usage of `matrix_data`/ `matrix_assembly_data`. Host is determined by the executor: `ref`/`omp` for cpu, `cuda` for gpu.
+

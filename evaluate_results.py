@@ -122,11 +122,12 @@ def getXValues(dim,n_values,measuring_unit_x):
 #-----------------------------------------------------------------------------------------------------------------------------
 
 folder_string = "./results/400-4/"
-data_type = "median" # "average" "median" "max" "min"
-plotStartingPoint_n = 1
+data_type = "min" # "average" "median" "max" "min"
+plotStartingPoint_n = 15
 
 plot_istl = True
 plot_gko = True
+plot_roofline = False
 
 # executor
 plot_ref = True
@@ -143,12 +144,19 @@ plot_ell = False
 plot_coo = False
 plot_sellp = False
 
+# ISTL BuildModes
+plot_implicit = True
+plot_row_wise = False
+
 # special data
 plot_No2 = False
+plot_minor_deviations = False
 
 plot_cache_sizes = True
+plot_L1 = False
+plot_L2 = True
+plot_L3 = True
 plot_RAM_size = False
-plot_roofline = True
 
 # x-axis
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
@@ -219,7 +227,11 @@ if __name__ == "__main__":
     for file in range(0,len(filenames)):
         name = filenames[file][:-4]
         filename_components = name.split('_')
-        if(filename_components[0]=="ISTL" and not plot_istl): continue
+        if(filename_components[0]=="ISTL"):
+            if not plot_istl: continue
+            if (not plot_implicit and filename_components[1]=="implicit"): continue
+            if (not plot_row_wise and filename_components[1]=="row"): continue
+
         if(filename_components[0] == "gko"): 
             if not plot_gko: continue
             if((not plot_cpu) and filename_components[1] == "cpu"): 
@@ -237,6 +249,7 @@ if __name__ == "__main__":
             if((not plot_sellp) and filename_components[3] == "sellp"): continue  
             del filename_components[4:7]
         if(not plot_No2 and filename_components[-1]== "No2"): continue
+        if(not plot_minor_deviations and filename_components[-1]!= "No2" and 4<len(filename_components)): continue
 
         name = '_'.join(filename_components)
         axis[0,0].plot(x_2D, plotData2D[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
@@ -260,14 +273,17 @@ if __name__ == "__main__":
     for ax in axis.flat:
         ax.set_xlabel(measuring_unit_x)
         ax.set_ylabel('time in nanoseconds')
-        ax.legend()
         if(plot_y_log): ax.set_yscale('log')
         if(plot_x_log): ax.set_xscale('log')
         if(plot_cache_sizes):
-            ax.axvline(x=L1_size_byte, color="grey", linestyle=':')
-            ax.axvline(x=L2_size_byte, color="grey", linestyle='-.')
-            ax.axvline(x=L3_size_byte, color="grey", linestyle='--')
+            if plot_L1:
+                ax.axvline(x=L1_size_byte, color="grey", linestyle=':', label="L1 Cache")
+            if plot_L2:
+                ax.axvline(x=L2_size_byte, color="grey", linestyle='-.',label="L2 Cache")
+            if plot_L3:
+                ax.axvline(x=L3_size_byte, color="grey", linestyle='--', label="L3 Cache")
         if(plot_RAM_size): ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
+        ax.legend()
 
     if(not plot_SpMV_d3_only):
         plt.show()
