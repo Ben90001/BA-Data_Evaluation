@@ -121,8 +121,7 @@ def getXValues(dim,n_values,measuring_unit_x):
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
 
-folder_string = "./results/400-4/"
-data_type = "min" # "average" "median" "max" "min"
+folder_string = "./results/50-3-20/"
 plotStartingPoint_n = 15
 
 plot_istl = True
@@ -132,21 +131,21 @@ plot_roofline = False
 # executor
 plot_ref = True
 plot_omp = False
-plot_cuda = False
+plot_cuda = True
 
 # assembly data structure
 plot_cpu = True
-plot_gpu = False
+plot_gpu = True
 
 # different matrix formats (gko,mtx_data)
 plot_csr = True
-plot_ell = False
+plot_ell = True
 plot_coo = False
 plot_sellp = False
 
 # ISTL BuildModes
 plot_implicit = True
-plot_row_wise = False
+plot_row_wise = True
 
 # special data
 plot_No2 = False
@@ -161,9 +160,13 @@ plot_RAM_size = False
 # x-axis
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
 measuring_unit_x = "mtx in Bytes"
+# y-axis 
 # possible values: "no","nnz","N"
-plot_per_devisor = "nnz"
-plot_y_log = True
+plot_per_devisor = "no"
+# possible values: "average" "median" "max" "min"
+data_type = "median" 
+
+plot_y_log = False
 plot_x_log = True
 plot_marker = False
 
@@ -178,7 +181,7 @@ L3_size_byte = 32768 * 1024 /8 # = 32MiB
 RAM_size_byte = 534359343104    # free -b | grep Mem | awk '{print $7}'
 
 #extract n_upperBound and rounds
-n_max, rounds = map(int, folder_string[len("./results/"):-1].split('-'))
+n_max, rounds, max_iters = map(int, folder_string[len("./results/"):-1].split('-'))
 
 
 print("nnz verification: ")
@@ -187,9 +190,9 @@ print("d=3, n = 100, nnz= "+str(getNNZ(3,100))) # should be 6 940 000
 print("d=2, n = 101, nnz= "+str(getNNZ(2,101))) # should be 50 601
 print("d=3, n = 101, nnz= "+str(getNNZ(3,101))) # should be 7 150 901
 
+# get file names (exclude folders and hidden files)
 
 if __name__ == "__main__":
-    # get file names (exclude folders and hidden files)
     filenames = [file \
                 for file in os.listdir(folder_string) \
                 if os.path.isfile(folder_string+file) and not file.startswith('.')]
