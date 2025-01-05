@@ -1,4 +1,0 @@
-Script execution started at: Thu Dec 12 05:35:40 PM CET 2024
-Finished ISTL with buildMode row_wise at       Thu Dec 12 08:03:27 PM CET 2024
-Finished with executor: ref, matrix format: csr at      Thu Dec 12 08:03:27 PM CET 2024
-Script execution ended at: Thu Dec 12 08:03:27 PM CET 2024

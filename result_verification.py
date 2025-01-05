@@ -75,11 +75,11 @@ def verifyGroupedFiles(grouped_files,folder_string):
     between_groups_comparisons = 0
 
     # make comparisons
-    for n in range(1,n_max+1):
+    for n in range(1,max_verify+1):
         for dim in range(2,3+1):
             baseISTL = ""
             baseGKO = ""
-            for filename in grouped_files[str(n)+"_"+str(dim)]:
+            for filename in sorted(grouped_files[str(n)+"_"+str(dim)],reverse=True):
                 components = filename.split('_')
                 shiftOnce=False
                 if components[2]=="x": shiftOnce = True # adjust as x_y is split into two components
@@ -93,7 +93,7 @@ def verifyGroupedFiles(grouped_files,folder_string):
                             passing_count_ISTL_group +=1
                             if print_matching: print("ISTL: "+baseISTL+" and "+filename+" are identical.")
                         else:
-                            if print_non_matching: print("ISTL: "+baseISTL+" and "+filename+" are NOT identical.-----------------------------------------------------------!")
+                            if print_non_matching: print("ISTL: "+baseISTL+" and "+filename+" are NOT identical!")
                 # compare within Ginkgo
                 elif components[3+shiftOnce] == "gko":
                     if baseGKO == "":
@@ -104,7 +104,7 @@ def verifyGroupedFiles(grouped_files,folder_string):
                             passing_count_GKO_group+=1
                             if print_matching: print("GKO: "+baseGKO+" and "+filename+" are identical.")
                         else:
-                            if print_non_matching: print("GKO: "+baseGKO+" and "+filename+" are NOT identical.-----------------------------------------------------------!")
+                            if print_non_matching: print("GKO: "+baseGKO+" and "+filename+" are NOT identical!")
             # compare the Groups
             if((not baseISTL=="") and (not baseGKO=="") and compare_between_groups):
                 between_groups_comparisons+=1
@@ -113,21 +113,23 @@ def verifyGroupedFiles(grouped_files,folder_string):
                     passing_count_between_groups+=1
                     if print_matching: print(baseGKO+" and "+baseISTL+" are identical.")
                 else:
-                    if print_non_matching: print(baseGKO+" and "+baseISTL+" are NOT identical."+message+"-----------------------------------------------------------!")
+                    if print_non_matching: print(baseGKO+" and "+baseISTL+" are NOT identical!"+message)
     return [passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups, \
              ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons]
 
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+max_verify = 50
+
 verify_A = True
-verify_y = False
-verify_x_k = False
+verify_y = True
+verify_x_k = True
 
 print_non_matching = False
-print_matching = True
+print_matching = False
 
 compare_ISTL_group = False
-compare_GKO_group = False
+compare_GKO_group = True
 compare_between_groups = True
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
