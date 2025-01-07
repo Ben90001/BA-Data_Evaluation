@@ -3,7 +3,6 @@ import os
 import statistics
 from collections import defaultdict
 import sys
-import pickle
 
 from value_calculations import *
 
@@ -22,61 +21,40 @@ def getRawData(filename):
             data.append(row)
     print(filename+": Data size: "+str(len(data)))
     return data
-# keeping returned datastructure similar to before resturucturing (change: only one dim)
-# rawData-> [dataType][n](n,dim,time) -> [n] (n, dim, rep, gen, SpMV, CG_jac, CG_ilu)
-def getData(folder_string, fileSuffix, dataTypes, processing_type,n_max):
+def getData(filename, data_type):
+    data = getRawData(filename)
+    #(n,dim) -> tuple-list of values
+    map = defaultdict(list)
+    for n, dim, round, gen_time, spmv_time, CG_time in data: map[(n, dim)].append((gen_time, spmv_time,CG_time))
+
+    processedValues2D = []
+    processedValues3D = []
+
+    for (n, dim), values in map.items():
+        gen_times = [v[0] for v in values]
+        SpMV_times = [v[1] for v in values]
+        CG_times = [v[2] for v in values]
+        processedValue = []
+        if(data_type == "average"):
+            processedValue = [n,dim, statistics.mean(gen_times), statistics.mean(SpMV_times), statistics.mean(CG_times)]
+        elif(data_type == "median"):
+            processedValue = [n,dim, statistics.median(gen_times), statistics.median(SpMV_times), statistics.median(CG_times)]
+        elif(data_type == "max"):
+            processedValue = [n,dim, max(gen_times), max(SpMV_times), max(CG_times)]
+        elif(data_type == "min"):
+            processedValue = [n,dim, min(gen_times), min(SpMV_times), min(CG_times)]
+        else:
+            raise ValueError("data_type not not known")
+        if dim == 2:
+            processedValues2D.append(processedValue)
+        elif dim == 3:
+            processedValues3D.append(processedValue)
     
-    memoization_folder = folder_string+"processedData/"
-    filename = fileSuffix+".pkl"
-    if os.path.exists(memoization_folder+filename):
-        with open(memoization_folder+filename, "rb") as file:
-            return pickle.load(file)
-    os.makedirs(memoization_folder, exist_ok=True)
-    
-    i=0
-    #[dataType][n](n,dim,time)
-    processedValues = [[],[],[],[]]
-    for dataType in dataTypes:
-        data = getRawData(folder_string+dataType+"/"+dataType+"_"+fileSuffix)
-        #(n,dim) -> tuple-list of values
-        map = defaultdict(list)
-        # dim unnecessary with new data format
-        for n, dim, rep, time  in data: map[(n,dim)].append((time))
-
-
-        for (n, dim), values in map.items():
-            processedValue = []
-            if(processing_type == "average"):
-                processedValue = [n,dim, statistics.mean(values)]
-            elif(processing_type == "median"):
-                processedValue = [n,dim, statistics.median(values)]
-            elif(processing_type == "max"):
-                processedValue = [n,dim, max(values)]
-            elif(processing_type == "min"):
-                processedValue = [n,dim, min(values)]
-            else:
-                raise ValueError("processing_type not not known")
-            
-            processedValues[i].append(processedValue)
-
-        processedValues[i].sort(key=lambda x: x[0])
-        print(dataType+"_"+fileSuffix+": Processed data size: "+ str(len(processedValues[i])))
-        i+=1
-    print("Debug: Finished \"Dataset\"")
-
-    # append all other timings to the gen timings array
-    print("returning processedValues"+str(processedValues))
-    for i in range(0,len(processedValues[0])):
-        processedValues[0][i].append(processedValues[1][i][2]) #SpMV
-        processedValues[0][i].append(processedValues[2][i][2]) #CG_jac
-        processedValues[0][i].append(processedValues[3][i][2]) #CG_ilu
-    print("returning processedValues[0]"+str(processedValues[0]))
-    
-    # memoize for future
-    with open(memoization_folder+filename, "wb") as file:
-        pickle.dump(processedValues[0], file)
-
-    return processedValues[0]
+    processedValues2D.sort(key=lambda x: x[0])
+    processedValues3D.sort(key=lambda x: x[0])
+    print(filename+": Processed data size: "+ str(len(processedValues2D))+" and "+ str(len(processedValues3D)))
+    print('\n')
+    return (processedValues2D,processedValues3D)
 
 def getDevisors(dim, n_upperBound, plot_per_devisor):
     if(plot_per_devisor=="no"):
@@ -92,19 +70,16 @@ def getDevisors(dim, n_upperBound, plot_per_devisor):
         return devisors
     raise ValueError(f"Invalid value for: {dim}")
 
-# input data:
 #   data [x][0] = n
-#   data [x][1] = dim
+#   data [x][1] = dim           -> fix as data get splitted upon retrieval (getData)
 #   data [x][2] = gen_time
 #   data [x][3] = SpMV_time
-#   data [x][4] = CGjac_time
-#   data [x][5] = CGilu_time
-# returns plotable y-values: Gen,SpMV,CG_jac,CG_ilu
+#   data [x][4] = CG_time
+# returns plotable y-values: Gen,SpMV,CG_jac
 def getPlotData(data,devisors,plotStartingPoint_n,n_max):
     gen_data = []
     SpMV_data = []
-    CGjac_data = []
-    CGilu_data = []
+    CG_data = []
 
     #index of next datapoint
     i=0 
@@ -116,16 +91,13 @@ def getPlotData(data,devisors,plotStartingPoint_n,n_max):
         if data[i][0] == n:
             gen_data.append(data[i][2]/devisors[n])
             SpMV_data.append(data[i][3]/devisors[n])
-            CGjac_data.append(data[i][4]/devisors[n])
-            CGilu_data.append(data[i][5]/devisors[n])
+            CG_data.append(data[i][4]/devisors[n])
             if(i+1<len(data)): i+=1
         else: # no values for skipped n
             gen_data.append(None)
             SpMV_data.append(None)
-            CGjac_data.append(None)
-            CGilu_data.append(None)
-    return [gen_data,SpMV_data,CGjac_data,CGilu_data]
-
+            CG_data.append(None)
+    return [gen_data,SpMV_data,CG_data]
 def getRooflinePlot(dim, n_values,devisors,plotStartingPoint_n,mtx_format):
     result = []
     for n in n_values:
@@ -157,10 +129,10 @@ def getXValues(dim,n_values,measuring_unit_x):
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
 
-folder_string = "./results/110-10-3d/data/"
-plotStartingPoint_n = 20
+folder_string = "./results/400-4-10/"
+plotStartingPoint_n = 30
 #extract n_upperBound and rounds
-n_max, max_iters, dim = map(int, folder_string[len("./results/"):-len("/data/")].replace("d", "").split('-'))
+n_max, rounds, max_iters = map(int, folder_string[len("./results/"):-1].split('-'))
 #n_max=400
 
 plot_istl = True
@@ -171,12 +143,12 @@ mtx_format = "csr"
 # executor
 plot_ref = True
 plot_1omp = True
-plot_omp = True
+plot_omp = False
 plot_cuda = False
 
 # assembly data structure
-plot_md = True
-plot_mad = True
+plot_cpu = True
+plot_gpu = True
 
 # different matrix formats (gko,mtx_data)
 plot_csr = True
@@ -200,12 +172,12 @@ plot_RAM_size = False
 
 # x-axis
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
-measuring_unit_x ="mtx in Bytes"
+measuring_unit_x ="n" #"mtx in Bytes"
 # y-axis 
 # possible values: "no","nnz","N"
 plot_per_devisor = "nnz"
 # possible values: "average" "median" "max" "min"
-processing_type = "min" 
+data_type = "min" 
 
 plot_y_log = True
 plot_x_log = False
@@ -225,48 +197,49 @@ RAM_size_byte = 534359343104    # free -b | grep Mem | awk '{print $7}'
 # if called from roofline file
 if (not __name__ == "__main__"):
     plot_per_devisor = "no"
-    print("Devisors deactivated for roofline diagram")
+    print("Devisors deactivated")
 
-
-
-dataTypes = ["gen", "SpMV", "CGjac","CGilu"]
-
-# get file names 
-# (exclude folders and hidden files) 
-# (remove first file component)
-filenameSuffixes = ["_".join(file.split('_')[1:]) \
-            for file in os.listdir(folder_string+"/gen/") \
-            if os.path.isfile(folder_string+"/gen/"+file) and not file.startswith('.')]
-filenameSuffixes.sort()
-print("filenameSuffixes: \n"+str(filenameSuffixes))
+# get file names (exclude folders and hidden files) 
+filenames = [file \
+            for file in os.listdir(folder_string) \
+            if os.path.isfile(folder_string+file) and not file.startswith('.')]
+filenames.sort()
 
 # file -> processedData
-processedDatas= [getData(folder_string, fileSuffix, dataTypes, processing_type, n_max) for fileSuffix in filenameSuffixes]
-print("processedDatas \n"+ str(processedDatas))
-#rawDatas2D = []#[file[0] for file in rawDatas]
-#rawDatas3D = processedDatas
-#rawDatas3D = [file[1] for file in rawDatas]
+rawDatas= [getData(folder_string+file,data_type) for file in filenames]
+rawDatas2D = [file[0] for file in rawDatas]
+rawDatas3D = [file[1] for file in rawDatas]
 
 # processedData -> plotData
 n_values = list(range(1, n_max+1))
-print("n_values \n"+ str(n_values))
-x_values = getXValues(dim,n_values,measuring_unit_x)
-devisors = getDevisors(dim,n_max,plot_per_devisor)
+print("n_values"+ str(n_values))
+x_3D = getXValues(3,n_values,measuring_unit_x)
+x_2D = getXValues(2,n_values,measuring_unit_x)
+devisors_2D = getDevisors(2,n_max,plot_per_devisor)
+devisors_3D = getDevisors(3,n_max,plot_per_devisor)
 
-# [file][dataType][n]
-plotData = [getPlotData(data,devisors,plotStartingPoint_n,n_max) for data in processedDatas]
-print(str(len(devisors)))
-print(str(devisors))
-rooflineValues= getRooflinePlot(dim,n_values,devisors,plotStartingPoint_n,mtx_format)
+# [file][gen/spmv/cg][time]
+plotData2D = [getPlotData(data,devisors_2D,plotStartingPoint_n,n_max) for data in rawDatas2D]
+plotData3D = [getPlotData(data,devisors_3D,plotStartingPoint_n,n_max) for data in rawDatas3D]
+print("plotData2D length: "+str(len(plotData2D[0][0]))+" "+str(len(plotData2D[0][1]))+" "+str(len(plotData2D[0][2])))
+#print("plotData2D length: "+str(len(plotData2D[1][0]))+" "+str(len(plotData2D[1][1]))+" "+str(len(plotData2D[1][2])))
+
+print(str(len(devisors_3D)))
+print(str(devisors_3D))
+
+rooflineValues_2D= getRooflinePlot(2,n_values,devisors_2D,plotStartingPoint_n,mtx_format)
+rooflineValues_3D= getRooflinePlot(3,n_values,devisors_3D,plotStartingPoint_n,mtx_format)
+
+
 
 if __name__ == "__main__":
     # Add Data to Plots
-    figure, axis = plt.subplots(4, 1)
+    figure, axis = plt.subplots(3, 2)
     name = "no name assigned"
     
-    for file in range(0,len(filenameSuffixes)):
+    for file in range(0,len(filenames)):
         isGKO=False
-        name = filenameSuffixes[file][:-4]
+        name = filenames[file][:-4]
         filename_components = name.split('_')
         if(filename_components[0]=="ISTL"):
             if not plot_istl: continue
@@ -276,8 +249,12 @@ if __name__ == "__main__":
         if(filename_components[0] == "gko"): 
             isGKO = True
             if not plot_gko: continue
-            if((not plot_md) and filename_components[1] == "md"): continue
-            if((not plot_mad) and filename_components[1] == "mad"): continue
+            if((not plot_cpu) and filename_components[1] == "cpu"): 
+                filename_components[1] = "c"
+                continue
+            if((not plot_gpu) and filename_components[1] == "gpu"): 
+                filename_components[1] = "g"
+                continue
             if((not plot_ref) and filename_components[2] == "ref"): continue 
             if((not plot_1omp) and filename_components[2] == "1omp"): continue 
             if((not plot_omp) and filename_components[2] == "omp"): continue 
@@ -291,22 +268,26 @@ if __name__ == "__main__":
         if(not plot_minor_deviations and filename_components[-1]!= "No2" and 4<len(filename_components)+isGKO): continue
 
         name = '_'.join(filename_components)
-
-        axis[0].plot(x_values, plotData[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-        axis[1].plot(x_values, plotData[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-        axis[2].plot(x_values, plotData[file][2], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
-        axis[3].plot(x_values, plotData[file][3], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[0,0].plot(x_2D, plotData2D[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[1,0].plot(x_2D, plotData2D[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[2,0].plot(x_2D, plotData2D[file][2], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[0,1].plot(x_3D, plotData3D[file][0], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[1,1].plot(x_3D, plotData3D[file][1], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
+        axis[2,1].plot(x_3D, plotData3D[file][2], label=name, marker='s', markerfacecolor='none', markersize=plot_marker*3)
     if plot_roofline:
-        axis[1].plot(x_values, rooflineValues, label="roofline", color="black")
+        axis[1,0].plot(x_2D, rooflineValues_2D, label="roofline", color="black")
+        axis[1,1].plot(x_3D, rooflineValues_3D, label="roofline", color="black")
 
     # Set titles
     perDiv=""
     if(plot_per_devisor=="nnz"): perDiv= " per NNZ"
     if(plot_per_devisor=="N"): perDiv= " per N"
-    axis[0].set_title("d=3 "+processing_type+" time to generate sparse matrix"+perDiv)
-    axis[1].set_title("d=3 "+processing_type+" time to calculate SpMV"+perDiv)
-    axis[2].set_title("d=3 "+processing_type+" time to run CG_jac with"+str(max_iters)+"Iterations"+perDiv)
-    axis[3].set_title("d=3 "+processing_type+" time to run CG_ilu with"+str(max_iters)+"Iterations"+perDiv)
+    axis[0,0].set_title("d=2 "+data_type+" time to generate sparse matrix"+perDiv)
+    axis[1,0].set_title("d=2 "+data_type+" time to calculate SpMV"+perDiv)
+    axis[2,0].set_title("d=2 "+data_type+" time to run CG with"+str(max_iters)+"Iterations"+perDiv)
+    axis[0,1].set_title("d=3 "+data_type+" time to generate sparse matrix"+perDiv)
+    axis[1,1].set_title("d=3 "+data_type+" time to calculate SpMV"+perDiv)
+    axis[2,1].set_title("d=3 "+data_type+" time to run CG with"+str(max_iters)+"Iterations"+perDiv)
 
 
     for ax in axis.flat:
@@ -322,10 +303,7 @@ if __name__ == "__main__":
             if plot_L3:
                 ax.axvline(x=L3_size_byte, color="grey", linestyle='--', label="L3 Cache")
         if(plot_RAM_size): ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
-        plt.subplots_adjust(top=0.95, bottom=0.05, hspace=0.5)
-        # Move the plot to the left
-        plt.subplots_adjust(right=0.7)
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.legend()
 
     if(not plot_SpMV_d3_only):
         plt.show()
