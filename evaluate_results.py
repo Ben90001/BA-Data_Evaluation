@@ -24,10 +24,10 @@ def getRawData(filename):
     return data
 # keeping returned datastructure similar to before resturucturing (change: only one dim)
 # rawData-> [dataType][n](n,dim,time) -> [n] (n, dim, rep, gen, SpMV, CG_jac, CG_ilu)
-def getData(folder_string, fileSuffix, dataTypes, processing_type,n_max):
+def getData(folder_string, dataDirectoryName, dataTypes, processing_type,n_max):
     
     memoization_folder = folder_string+"processedData/"
-    filename = fileSuffix+".pkl"
+    filename = dataDirectoryName+".pkl"
     if os.path.exists(memoization_folder+filename):
         with open(memoization_folder+filename, "rb") as file:
             return pickle.load(file)
@@ -37,7 +37,7 @@ def getData(folder_string, fileSuffix, dataTypes, processing_type,n_max):
     #[dataType][n](n,dim,time)
     processedValues = [[],[],[],[]]
     for dataType in dataTypes:
-        data = getRawData(folder_string+dataType+"/"+dataType+"_"+fileSuffix)
+        data = getRawData(folder_string+"data/"+dataDirectoryName+"/"+dataType+".txt")
         #(n,dim) -> tuple-list of values
         map = defaultdict(list)
         # dim unnecessary with new data format
@@ -60,17 +60,17 @@ def getData(folder_string, fileSuffix, dataTypes, processing_type,n_max):
             processedValues[i].append(processedValue)
 
         processedValues[i].sort(key=lambda x: x[0])
-        print(dataType+"_"+fileSuffix+": Processed data size: "+ str(len(processedValues[i])))
+        print(dataType+": "+dataDirectoryName+": Processed data size: "+ str(len(processedValues[i])))
         i+=1
-    print("Debug: Finished \"Dataset\"")
+    if debug_mode: print("Debug: Finished \"Dataset\"")
 
     # append all other timings to the gen timings array
-    print("returning processedValues"+str(processedValues))
+    #print("before returning: processedValues"+str(processedValues))
     for i in range(0,len(processedValues[0])):
         processedValues[0][i].append(processedValues[1][i][2]) #SpMV
         processedValues[0][i].append(processedValues[2][i][2]) #CG_jac
         processedValues[0][i].append(processedValues[3][i][2]) #CG_ilu
-    print("returning processedValues[0]"+str(processedValues[0]))
+    #print("returning processedValues[0]"+str(processedValues[0]))
     
     # memoize for future
     with open(memoization_folder+filename, "wb") as file:
@@ -157,11 +157,11 @@ def getXValues(dim,n_values,measuring_unit_x):
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
 
-folder_string = "./results/110-10-3d/data/"
+folder_string = "./results/110-4-10-3d/"
 plotStartingPoint_n = 20
-#extract n_upperBound and rounds
-n_max, max_iters, dim = map(int, folder_string[len("./results/"):-len("/data/")].replace("d", "").split('-'))
-#n_max=400
+# get info from foldername
+n_max, min_reps, max_iters, dim = map(int, folder_string[len("./results/"):-1].replace("d", "").split('-'))
+#n_max=400 #for smaller plot range overwrite n_max
 
 plot_istl = True
 plot_gko = True
@@ -172,11 +172,11 @@ mtx_format = "csr"
 plot_ref = True
 plot_1omp = True
 plot_omp = True
-plot_cuda = False
+plot_cuda = True
 
 # assembly data structure
 plot_md = True
-plot_mad = True
+plot_mad = False
 
 # different matrix formats (gko,mtx_data)
 plot_csr = True
@@ -202,17 +202,18 @@ plot_RAM_size = False
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
 measuring_unit_x ="mtx in Bytes"
 # y-axis 
-# possible values: "no","nnz","N"
-plot_per_devisor = "nnz"
+# possible values: "no","nnz","N" missing: "byte" -> divisor=mtx size
+plot_per_devisor = "no"
 # possible values: "average" "median" "max" "min"
-processing_type = "min" 
+processing_type = "median" 
 
-plot_y_log = True
+plot_y_log = False
 plot_x_log = False
 plot_marker = False
 
 
 plot_SpMV_d3_only = False
+debug_mode = False
 #-----------------------------------------------------------------------------------------------------------------------------
 
 # Kib -> B
@@ -234,29 +235,29 @@ dataTypes = ["gen", "SpMV", "CGjac","CGilu"]
 # get file names 
 # (exclude folders and hidden files) 
 # (remove first file component)
-filenameSuffixes = ["_".join(file.split('_')[1:]) \
-            for file in os.listdir(folder_string+"/gen/") \
-            if os.path.isfile(folder_string+"/gen/"+file) and not file.startswith('.')]
-filenameSuffixes.sort()
-print("filenameSuffixes: \n"+str(filenameSuffixes))
+dataDirectoryNames = [folder \
+            for folder in os.listdir(folder_string+"/data/") \
+            if os.path.isdir(folder_string+"/data/"+folder) and not folder.startswith('.')]
+dataDirectoryNames.sort()
+if debug_mode: print("dataDirectoryNames: \n"+str(dataDirectoryNames))
 
 # file -> processedData
-processedDatas= [getData(folder_string, fileSuffix, dataTypes, processing_type, n_max) for fileSuffix in filenameSuffixes]
-print("processedDatas \n"+ str(processedDatas))
+processedDatas= [getData(folder_string, dataDirectoryName, dataTypes, processing_type, n_max) for dataDirectoryName in dataDirectoryNames]
+if debug_mode: print("processedDatas \n"+ str(processedDatas))
 #rawDatas2D = []#[file[0] for file in rawDatas]
 #rawDatas3D = processedDatas
 #rawDatas3D = [file[1] for file in rawDatas]
 
 # processedData -> plotData
 n_values = list(range(1, n_max+1))
-print("n_values \n"+ str(n_values))
+if debug_mode: print("n_values \n"+ str(n_values))
 x_values = getXValues(dim,n_values,measuring_unit_x)
 devisors = getDevisors(dim,n_max,plot_per_devisor)
+if debug_mode: print("devisors \n"+ str(devisors))
 
 # [file][dataType][n]
 plotData = [getPlotData(data,devisors,plotStartingPoint_n,n_max) for data in processedDatas]
-print(str(len(devisors)))
-print(str(devisors))
+if debug_mode: print("plotData[0] \n"+ str(plotData[0]))
 rooflineValues= getRooflinePlot(dim,n_values,devisors,plotStartingPoint_n,mtx_format)
 
 if __name__ == "__main__":
@@ -264,9 +265,9 @@ if __name__ == "__main__":
     figure, axis = plt.subplots(4, 1)
     name = "no name assigned"
     
-    for file in range(0,len(filenameSuffixes)):
+    for file in range(0,len(dataDirectoryNames)):
         isGKO=False
-        name = filenameSuffixes[file][:-4]
+        name = dataDirectoryNames[file][:-4]
         filename_components = name.split('_')
         if(filename_components[0]=="ISTL"):
             if not plot_istl: continue

@@ -6,9 +6,10 @@ from value_calculations import *
 from evaluate_results import *
 
 #array of timeings -> array of performance for timings
-def transform_time_to_performance(plotData,n__max): #3D only currently #SpMV only currently
+def transform_time_to_performance(plotData,n_max): #3D only currently #SpMV only currently
     # return total work divided by total time
     performance = []
+    print("plotData in transform_time_to_performance: len"+str(len(plotData))+"\n"+str(plotData))
     for i in range(0,n_max):
         if plotData[i]== None:
             performance.append(np.nan)
@@ -22,13 +23,13 @@ def transform_time_to_performance(plotData,n__max): #3D only currently #SpMV onl
 
 dim =3
 if __name__ == "__main__":
-    arithmetic_intensity = np.linspace(0.0968, 0.0972, 100000)
+    arithmetic_intensity = np.linspace(0.0962, 0.0972, 100000)
     n_values = list(range(1,n_max+1))
     intensityValues = [getArithmeticIntnsity(n,dim,mtx_format) for n in n_values]
     roofline_of_n = [np.minimum(peak_performance, intensityValues[n-1]*peak_sustainable_bandwidth)for n in n_values]
     print("roofline_of_n: "+str(roofline_of_n))
     # [file][performances of n]
-    SpMV_performances = [transform_time_to_performance(plotData3D[i][1],n_max) for i in range(0,len(plotData3D))]
+    SpMV_performances = [transform_time_to_performance(plotData[i][1],n_max) for i in range(0,len(processedDatas))]
 
     # Roofline model
     roofline = np.minimum(peak_performance, arithmetic_intensity*peak_sustainable_bandwidth)
@@ -36,8 +37,8 @@ if __name__ == "__main__":
     # Plotting
     plt.plot(arithmetic_intensity, roofline, label="Roofline Model", color='b')
     #plt.scatter(intensityValues,roofline_of_n)
-    for SpMV_performance in SpMV_performances:
-        plt.plot(intensityValues, SpMV_performance, label="a resutl")
+    for i in range(0,len(dataDirectoryNames)):
+        plt.plot(intensityValues, SpMV_performances[i], label=dataDirectoryNames[i])
     plt.xscale('log')
     plt.yscale('log')
 
@@ -51,7 +52,8 @@ if __name__ == "__main__":
     plt.xlabel('Arithmetic Intensity (FLOPS/Byte)')
     plt.title('Roofline Model - SpMV')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-    plt.legend()
+    plt.subplots_adjust(right=0.75)
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     plt.show()
 
