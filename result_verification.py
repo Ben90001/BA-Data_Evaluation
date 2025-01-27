@@ -5,26 +5,34 @@ import scipy
 from value_calculations import *
 from evaluate_results import *
 
-def getFilenames(folder_string):
-    filenames = [file \
+def getDirectoryNames(folder_string):
+    directoryNames = [dir \
+            for dir in os.listdir(folder_string) \
+            if os.path.isdir(folder_string+dir) and not dir.startswith('.')]
+    return sorted(directoryNames)
+def getFileNames(folder_string):
+    directoryNames = [file \
             for file in os.listdir(folder_string) \
             if os.path.isfile(folder_string+file) and not file.startswith('.')]
-    return filenames#.sort()
+    return sorted(directoryNames)
 
-def getGroupedFiles(filenames):
-    # Grouping filenames
+# work in progress
+def getGroupedFilePaths(directoryNames):
+    # Grouping filenames of same matrixType to n_dim keys
     groups = defaultdict(list)
-    for filename in filenames:
-        # Extract the first value pair (before '_')
-        key = '_'.join(filename.split('_')[:2])
-        groups[key].append(filename)
+    for dir in directoryNames:
+        fileNames = getFileNames(dir)
+        for file in fileNames:
+            # Extract the first value pair (before '_')
+            key = '_'.join(file.split('_')[:2])
+            groups[key].append(dir+file)
 
     # Convert to a regular dictionary (optional)
     grouped_files = dict(groups)
 
-    # Print grouped files
+    #Print grouped files
     #for key, group in grouped_files.items():
-        #print(f"Group {key}: {group}")
+     #   print(f"Group {key}: {group}")
     return grouped_files
 
 def read_mtx_file(filename):
@@ -57,7 +65,7 @@ def compare_mtx_files(file1,file2):
         else:
             return compare_mtx_files_dense(file1,file2)
 
-        
+
 
 def compare_mtx_files_dense(file1, file2, tol=1e-6):
     size1, data1 = read_mtx_file(file1)
@@ -95,46 +103,44 @@ def verifyGroupedFiles(grouped_files,folder_string):
         for dim in range(3,3+1):
             baseISTL = ""
             baseGKO = ""
-            for filename in sorted(grouped_files[str(n)+"_"+str(dim)],reverse=True):
-                components = filename.split('_')
-                shift=0
-                if components[2]=="x": shift = 2 # adjust as x_y is split into two components
+            for filePath in sorted(grouped_files[str(n)+"_"+str(dim)],reverse=True):
+                #print("verifyGroupedFiles: " +filePath)
+                pathComponents = filePath.split('/')
+                libType = pathComponents[-3].split('_')[0] # ISTL or gko
+                mtxType = pathComponents[-2]              # A, y, x_k_jac, x_k_ilu
+
                 # compare within ISTL
-                if components[3+shift] == "ISTL":
+                if libType == "ISTL":
                     if baseISTL == "":
-                        baseISTL = filename
+                        baseISTL = filePath
                     elif compare_ISTL_group:
                         ISTL_group_comparisons+=1
-                        if filecmp.cmp(folder_string+baseISTL, folder_string+filename, shallow=False):
+                        if filecmp.cmp(baseISTL, filePath, shallow=False):
                             passing_count_ISTL_group +=1
-                            if print_matching: print("ISTL: "+baseISTL+" and "+filename+" are identical.")
+                            if print_matching: print("ISTL: "+baseISTL+" and "+filePath+" are identical.")
                         else:
-                            if print_non_matching: print("ISTL: "+baseISTL+" and "+filename+" are NOT identical!")
+                            if print_non_matching: print("ISTL: "+baseISTL+" and "+filePath+" are NOT identical!")
                 # compare within Ginkgo
-                elif components[3+shift] == "gko":
+                elif libType == "gko":
                     if baseGKO == "":
-                        baseGKO = filename
+                        baseGKO = filePath
                     elif compare_GKO_group:
                         GKO_group_comparisons+=1
-                        if filecmp.cmp(folder_string+baseGKO, folder_string+filename, shallow=False):
+                        if compare_mtx_files(baseGKO, filePath)[0]:
                             passing_count_GKO_group+=1
-                            if print_matching: print("GKO: "+baseGKO+" and "+filename+" are identical.")
+                            if print_matching: print("GKO: "+baseGKO+" and "+filePath+" are identical.")
                         else:
-                            if print_non_matching: print("GKO: "+baseGKO+" and "+filename+" are NOT identical!")
+                            if print_non_matching: print("GKO: "+baseGKO+" and "+filePath+" are NOT identical!")
             # compare the Groups
             if((not baseISTL=="") and (not baseGKO=="") and compare_between_groups):
                 between_groups_comparisons+=1
-                isSame, message = compare_mtx_files(folder_string+baseISTL,folder_string+baseGKO)
+                isSame, message = compare_mtx_files(baseISTL,baseGKO)
                 if isSame:
                     passing_count_between_groups+=1
                     if print_matching: print(baseGKO+" and "+baseISTL+" are identical.")
                 else:
                     if print_non_matching: print(baseGKO+" and "+baseISTL+" are NOT identical!"+message)
-    if(folder_string[-2:-1]=="A"):
-        print()
-        print("baseISTL:"+baseISTL)
-        print("baseGKOL:"+baseGKO)
-        print()
+
     return [passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups, \
              ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons]
 
@@ -143,7 +149,7 @@ def verifyGroupedFiles(grouped_files,folder_string):
 max_verify = 30
 #Only dim=3 !!
 
-verify_A = False
+verify_A = True
 verify_y = True
 verify_x_k_jac = True
 verify_x_k_ilu = True
@@ -158,15 +164,16 @@ compare_between_groups = True
 
 
 folder_string = folder_string+"result-verification/"
-filenames_A = getFilenames(folder_string+"A/")
-filenames_y = getFilenames(folder_string+"y/")
-filenames_x_k_jac = getFilenames(folder_string+"x_k_jac/")
-filenames_x_k_ilu = getFilenames(folder_string+"x_k_ilu/")
+verificationDirectoryNames = getDirectoryNames(folder_string)
+directories_A = [folder_string+dirName+"/A/" for dirName in verificationDirectoryNames]
+directories_y = [folder_string+dirName+"/y/" for dirName in verificationDirectoryNames]
+directories_x_k_jac = [folder_string+dirName+"/x_k_jac/" for dirName in verificationDirectoryNames]
+directories_x_k_ilu = [folder_string+dirName+"/x_k_ilu/" for dirName in verificationDirectoryNames]
 
 if(verify_A):
     passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups,\
         ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons = \
-        verifyGroupedFiles(getGroupedFiles(filenames_A),folder_string+"A/")
+        verifyGroupedFiles(getGroupedFilePaths(directories_A),folder_string)
     print("Verifying A")
     print("ISTL Group passing: "+str(passing_count_ISTL_group)+"/"+str(ISTL_group_comparisons))
     print("GKO Group passing: "+str(passing_count_GKO_group)+"/"+str(GKO_group_comparisons))
@@ -175,7 +182,7 @@ if(verify_y):
     print("Verifying y")
     passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups,\
         ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons = \
-        verifyGroupedFiles(getGroupedFiles(filenames_y),folder_string+"y/")
+        verifyGroupedFiles(getGroupedFilePaths(directories_y),folder_string+"y/")
     print("ISTL Group passing: "+str(passing_count_ISTL_group)+"/"+str(ISTL_group_comparisons))
     print("GKO Group passing: "+str(passing_count_GKO_group)+"/"+str(GKO_group_comparisons))
     print("Between Groups passing: "+str(passing_count_between_groups)+"/"+str(between_groups_comparisons))
@@ -183,7 +190,7 @@ if(verify_x_k_jac):
     print("Verifying x_k_jac")
     passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups,\
         ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons = \
-        verifyGroupedFiles(getGroupedFiles(filenames_x_k_jac),folder_string+"x_k_jac/")
+        verifyGroupedFiles(getGroupedFilePaths(directories_x_k_jac),folder_string+"x_k_jac/")
     print("ISTL Group passing: "+str(passing_count_ISTL_group)+"/"+str(ISTL_group_comparisons))
     print("GKO Group passing: "+str(passing_count_GKO_group)+"/"+str(GKO_group_comparisons))
     print("Between Groups passing: "+str(passing_count_between_groups)+"/"+str(between_groups_comparisons))
@@ -191,7 +198,7 @@ if(verify_x_k_ilu):
     print("Verifying x_k_ilu")
     passing_count_ISTL_group, passing_count_GKO_group, passing_count_between_groups,\
         ISTL_group_comparisons,GKO_group_comparisons,between_groups_comparisons = \
-        verifyGroupedFiles(getGroupedFiles(filenames_x_k_ilu),folder_string+"x_k_ilu/")
+        verifyGroupedFiles(getGroupedFilePaths(directories_x_k_ilu),folder_string+"x_k_ilu/")
     print("ISTL Group passing: "+str(passing_count_ISTL_group)+"/"+str(ISTL_group_comparisons))
     print("GKO Group passing: "+str(passing_count_GKO_group)+"/"+str(GKO_group_comparisons))
     print("Between Groups passing: "+str(passing_count_between_groups)+"/"+str(between_groups_comparisons))

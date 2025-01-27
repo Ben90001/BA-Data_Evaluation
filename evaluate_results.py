@@ -22,10 +22,19 @@ def getRawData(filename):
             data.append(row)
     print(filename+": Data size: "+str(len(data)))
     return data
-# keeping returned datastructure similar to before resturucturing (change: only one dim)
-# rawData-> [dataType][n](n,dim,time) -> [n] (n, dim, rep, gen, SpMV, CG_jac, CG_ilu)
-def getData(folder_string, dataDirectoryName, dataTypes, processing_type,n_max):
-    
+# rawData[n](n,dim,reps,time) -> [dataType][n](averageTime)
+def getData(folder_string, dataDirectoryName, dataTypes):
+    averagedDatas = [[],[],[],[]]
+
+    for i in range(0,len(dataTypes)):
+        data= getRawData(folder_string+"data/"+dataDirectoryName+"/"+dataTypes[i]+".txt")
+        averagedData = [row[3]/row[2] for row in data] #calculating time average per rep
+        for j in range(0,plotStartingPoint_n-1):
+            averagedData[j] = np.nan
+        averagedDatas[i]= averagedData
+    return averagedDatas
+
+    ''''
     memoization_folder = folder_string+"processedData/"
     filename = dataDirectoryName+".pkl"
     if os.path.exists(memoization_folder+filename):
@@ -77,6 +86,7 @@ def getData(folder_string, dataDirectoryName, dataTypes, processing_type,n_max):
         pickle.dump(processedValues[0], file)
 
     return processedValues[0]
+    '''
 
 def getDevisors(dim, n_upperBound, plot_per_devisor):
     if(plot_per_devisor=="no"):
@@ -93,19 +103,25 @@ def getDevisors(dim, n_upperBound, plot_per_devisor):
     raise ValueError(f"Invalid value for: {dim}")
 
 # input data:
-#   data [x][0] = n
-#   data [x][1] = dim
-#   data [x][2] = gen_time
-#   data [x][3] = SpMV_time
-#   data [x][4] = CGjac_time
-#   data [x][5] = CGilu_time
+#   data [0][n] = gen_time_averaged
+#   data [1][n] = SpMV_time_averaged
+#   data [2][n] = CGjac_time_averaged
+#   data [3][n] = CGilu_time_averaged
 # returns plotable y-values: Gen,SpMV,CG_jac,CG_ilu
-def getPlotData(data,devisors,plotStartingPoint_n,n_max):
-    gen_data = []
-    SpMV_data = []
-    CGjac_data = []
-    CGilu_data = []
+def getPlotData(data,devisors,plotStartingPoint_n,n_max,dim,plot_performance):
+    if plot_performance:
+        # transform time->performance
+        for i in range(0,len(data)):
+            for n_minusOne in range(0,len(data[0])):
+                # work in GFLOPs / time in s
+                data[i][n_minusOne] = (getWork(n_minusOne+1,dim)/1000000000) / (data[i][n_minusOne]/1000000000) 
 
+
+    gen_data = [data[0][n_minusOne]/devisors[n_minusOne+1] for n_minusOne in range(0,len(data[0]))]
+    SpMV_data = [data[1][n_minusOne]/devisors[n_minusOne+1] for n_minusOne in range(0,len(data[1]))]
+    CGjac_data = [data[2][n_minusOne]/devisors[n_minusOne+1] for n_minusOne in range(0,len(data[2]))]
+    CGilu_data = [data[3][n_minusOne]/devisors[n_minusOne+1] for n_minusOne in range(0,len(data[3]))]
+    ''''
     #index of next datapoint
     i=0 
     # skip all entries with n below plotStartingPoint_n from adding into PlotData
@@ -124,7 +140,9 @@ def getPlotData(data,devisors,plotStartingPoint_n,n_max):
             SpMV_data.append(None)
             CGjac_data.append(None)
             CGilu_data.append(None)
-    return [gen_data,SpMV_data,CGjac_data,CGilu_data]
+    '''
+    plotData = [gen_data,SpMV_data,CGjac_data,CGilu_data]
+    return plotData
 
 def getRooflinePlot(dim, n_values,devisors,plotStartingPoint_n,mtx_format):
     result = []
@@ -133,6 +151,8 @@ def getRooflinePlot(dim, n_values,devisors,plotStartingPoint_n,mtx_format):
         if n >= plotStartingPoint_n:
             # *1Mrd summ over nanosecs, 
             value = 1000000000*(getWork(n,dim)/(getRooflineValue(peak_performance,peak_sustainable_bandwidth, n, dim,mtx_format)))/ devisors[n] #unter erstem Bruch 1000000000*
+            if plot_performance:
+                value = getWork(n,dim)/value # devide by 1 billion cancels out (work: flops -> Gflops, time ns->s)
         result.append(value)
     return result
 
@@ -157,26 +177,32 @@ def getXValues(dim,n_values,measuring_unit_x):
 # config
 #-----------------------------------------------------------------------------------------------------------------------------
 
-folder_string = "./results/110-4-10-3d/"
-plotStartingPoint_n = 20
+#folder_string = "./results/80-2-10-3d/"
+folder_string = "./results/210-7-10-3d/"
+plotStartingPoint_n = 12
 # get info from foldername
 n_max, min_reps, max_iters, dim = map(int, folder_string[len("./results/"):-1].replace("d", "").split('-'))
 #n_max=400 #for smaller plot range overwrite n_max
 
+plot_performance = False
+plot_roofline = True
+
 plot_istl = True
 plot_gko = True
-plot_roofline = True
+# used for getMatrixSize
 mtx_format = "csr"
+
 
 # executor
 plot_ref = True
 plot_1omp = True
 plot_omp = True
-plot_cuda = True
+plot_cuda = False
 
 # assembly data structure
 plot_md = True
 plot_mad = False
+
 
 # different matrix formats (gko,mtx_data)
 plot_csr = True
@@ -187,41 +213,45 @@ plot_sellp = True
 # ISTL BuildModes
 plot_implicit = True
 plot_row_wise = True
+plot_random = True
 
 # special data
 plot_No2 = True
 plot_minor_deviations = True
 
 plot_cache_sizes = True
-plot_L1 = False
-plot_L2 = False
-plot_L3 = False
+plot_L1 = True
+plot_L2 = True
+plot_L3 = True
 plot_RAM_size = False
 
 # x-axis
 # possible values: "n", "mtx+vec in Bytes" "mtx in Bytes"
-measuring_unit_x ="mtx in Bytes"
+measuring_unit_x = "mtx in Bytes"
 # y-axis 
 # possible values: "no","nnz","N" missing: "byte" -> divisor=mtx size
-plot_per_devisor = "no"
-# possible values: "average" "median" "max" "min"
-processing_type = "median" 
+plot_per_devisor = "nnz"
 
 plot_y_log = False
-plot_x_log = False
+plot_x_log = True
+plot_sharedxy = False
 plot_marker = False
 
 
-plot_SpMV_d3_only = False
+plot_SpMV_only = False
 debug_mode = False
 #-----------------------------------------------------------------------------------------------------------------------------
 
 # Kib -> B
-L1_size_byte = 32 * 1024 /8    # additional 32 for instructions
-L2_size_byte = 512 * 1024 /8
-L3_size_byte = 32768 * 1024 /8 # = 32MiB
-RAM_size_byte = 534359343104    # free -b | grep Mem | awk '{print $7}'
+L1_size_byte = 32 * 1024     # additional 32 for instructions
+L2_size_byte = 512 * 1024 
+L3_size_byte = 32768 * 1024  # = 32MiB
+RAM_size_byte = 534359343104   # free -b | grep Mem | awk '{print $7}'
+# each_numa =  264 GB          # cat /sys/devices/system/node/node*/meminfo
 
+if plot_performance:
+    plot_SpMV_only = True
+    plot_per_devisor="no"
 
 # if called from roofline file
 if (not __name__ == "__main__"):
@@ -242,7 +272,7 @@ dataDirectoryNames.sort()
 if debug_mode: print("dataDirectoryNames: \n"+str(dataDirectoryNames))
 
 # file -> processedData
-processedDatas= [getData(folder_string, dataDirectoryName, dataTypes, processing_type, n_max) for dataDirectoryName in dataDirectoryNames]
+processedDatas= [getData(folder_string, dataDirectoryName, dataTypes) for dataDirectoryName in dataDirectoryNames]
 if debug_mode: print("processedDatas \n"+ str(processedDatas))
 #rawDatas2D = []#[file[0] for file in rawDatas]
 #rawDatas3D = processedDatas
@@ -256,13 +286,16 @@ devisors = getDevisors(dim,n_max,plot_per_devisor)
 if debug_mode: print("devisors \n"+ str(devisors))
 
 # [file][dataType][n]
-plotData = [getPlotData(data,devisors,plotStartingPoint_n,n_max) for data in processedDatas]
+plotData = [getPlotData(data,devisors,plotStartingPoint_n,n_max,dim,plot_performance) for data in processedDatas]
 if debug_mode: print("plotData[0] \n"+ str(plotData[0]))
 rooflineValues= getRooflinePlot(dim,n_values,devisors,plotStartingPoint_n,mtx_format)
 
 if __name__ == "__main__":
     # Add Data to Plots
-    figure, axis = plt.subplots(4, 1)
+    if plot_sharedxy: 
+        figure, axis = plt.subplots(4, 1, sharex=True, sharey=True)
+    else:
+        figure, axis = plt.subplots(4, 1)
     name = "no name assigned"
     
     for file in range(0,len(dataDirectoryNames)):
@@ -273,6 +306,7 @@ if __name__ == "__main__":
             if not plot_istl: continue
             if (not plot_implicit and filename_components[1]=="implicit"): continue
             if (not plot_row_wise and filename_components[1]=="row"): continue
+            if (not plot_random and filename_components[1]=="random"): continue
 
         if(filename_components[0] == "gko"): 
             isGKO = True
@@ -304,15 +338,22 @@ if __name__ == "__main__":
     perDiv=""
     if(plot_per_devisor=="nnz"): perDiv= " per NNZ"
     if(plot_per_devisor=="N"): perDiv= " per N"
-    axis[0].set_title("d=3 "+processing_type+" time to generate sparse matrix"+perDiv)
-    axis[1].set_title("d=3 "+processing_type+" time to calculate SpMV"+perDiv)
-    axis[2].set_title("d=3 "+processing_type+" time to run CG_jac with"+str(max_iters)+"Iterations"+perDiv)
-    axis[3].set_title("d=3 "+processing_type+" time to run CG_ilu with"+str(max_iters)+"Iterations"+perDiv)
+    if plot_performance:
+        axis[1].set_title("average Performance calculating SpMV (dim=3)"+perDiv)
+    else:
+        axis[0].set_title("d=3 average time to generate sparse matrix"+perDiv)
+        axis[1].set_title("d=3 average time to calculate SpMV"+perDiv)
+        axis[2].set_title("d=3 average time to run CG_jac with "+str(max_iters)+"Iterations"+perDiv)
+        axis[3].set_title("d=3 average time to run CG_ilu with "+str(max_iters)+"Iterations"+perDiv)
+    
 
 
     for ax in axis.flat:
         ax.set_xlabel(measuring_unit_x)
-        ax.set_ylabel('time in nanoseconds')
+        if plot_performance:
+            ax.set_ylabel('GFLOPS/s')
+        else:
+            ax.set_ylabel('time in nanoseconds')
         if(plot_y_log): ax.set_yscale('log')
         if(plot_x_log): ax.set_xscale('log')
         if(plot_cache_sizes):
@@ -323,10 +364,19 @@ if __name__ == "__main__":
             if plot_L3:
                 ax.axvline(x=L3_size_byte, color="grey", linestyle='--', label="L3 Cache")
         if(plot_RAM_size): ax.axvline(x=RAM_size_byte, color="grey", linestyle='-')
-        plt.subplots_adjust(top=0.95, bottom=0.05, hspace=0.5)
-        # Move the plot to the left
-        plt.subplots_adjust(right=0.7)
+        if(plot_y_log): ax.set_ylim(bottom=1) 
+        else: ax.set_ylim(bottom=0)
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.subplots_adjust(top=0.95, bottom=0.05, hspace=0.5)
+    # Move the plot to the left
+    plt.subplots_adjust(right=0.7)
 
-    if(not plot_SpMV_d3_only):
-        plt.show()
+    if plot_SpMV_only:
+        for i,ax in enumerate(axis):
+            if not i==1:
+                ax.set_visible(False)
+
+        plt.subplots_adjust(top=1.1, bottom=-0.25, hspace=-0.8, left=0.05, right=0.81)
+
+    plt.show()
+    

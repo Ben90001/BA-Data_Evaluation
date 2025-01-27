@@ -23,7 +23,7 @@ def transform_time_to_performance(plotData,n_max): #3D only currently #SpMV only
 
 dim =3
 if __name__ == "__main__":
-    arithmetic_intensity = np.linspace(0.0962, 0.0972, 100000)
+    arithmetic_intensity = np.linspace(0.0962, 0.0971, 100000)
     n_values = list(range(1,n_max+1))
     intensityValues = [getArithmeticIntnsity(n,dim,mtx_format) for n in n_values]
     roofline_of_n = [np.minimum(peak_performance, intensityValues[n-1]*peak_sustainable_bandwidth)for n in n_values]

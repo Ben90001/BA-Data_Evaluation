@@ -14,6 +14,7 @@ def getNNZ(dim, n):
         #old : return 7*pow(n,dim)
         return 7*n*n*n - 6*n*n
     raise ValueError(f"Invalid value for: {dim}")
+# in elements
 def getMatrixSize(dim,n,format):
     if(format == "optimal"):
         return getNNZ(dim,n)

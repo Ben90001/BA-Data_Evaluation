@@ -1,3 +1,0 @@
-Script execution started at: Mon Nov 25 10:38:20 AM CET 2024
-Finished with executor: ref, matrix format: csr at      Mon Nov 25 06:14:47 PM CET 2024
-Script execution ended at: Mon Nov 25 06:14:47 PM CET 2024

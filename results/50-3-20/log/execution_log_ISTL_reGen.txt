@@ -1,8 +1,0 @@
-Script execution started at: Wed Dec 18 10:26:24 AM CET 2024
-Finished ISTL with buildMode implicit at       Wed Dec 18 10:27:06 AM CET 2024
-Finished ISTL with buildMode row_wise at       Wed Dec 18 10:27:50 AM CET 2024
-Finished with executor: ref, matrix format: csr at      Wed Dec 18 10:27:50 AM CET 2024
-Finished with executor: ref, matrix format: ell at      Wed Dec 18 10:27:50 AM CET 2024
-Finished with executor: cuda, matrix format: csr at      Wed Dec 18 10:27:50 AM CET 2024
-Finished with executor: cuda, matrix format: ell at      Wed Dec 18 10:27:50 AM CET 2024
-Script execution ended at: Wed Dec 18 10:27:50 AM CET 2024

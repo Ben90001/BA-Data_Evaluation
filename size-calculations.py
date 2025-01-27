@@ -1,3 +1,5 @@
+from value_calculations import *
+
 def sizeCalculation_bit(n,d,x,y,data_string):
     if(data_string=="xN"):
         N = 1
@@ -57,6 +59,7 @@ L1_exceeded = False
 L2_exceeded = False
 L3_exceeded = False
 RAM_exceeded = False
+''''
 for n in range(n_lowerBound,n_upperBound+1):
     dataSize = sizeCalculation_bit(n,d,x,y,data_string)
     #print(str(dataSize))
@@ -73,3 +76,9 @@ for n in range(n_lowerBound,n_upperBound+1):
         RAM_exceeded = True
         print(data_string+"("+f"{dataSize/GiB_bitSize:.2f}"+"GiB) exceeds RAM at: n="+str(n)+" d="+str(d))
 print("----finished----")
+'''
+
+dim=3
+for n in range(0,500):
+    if n%5 ==0:
+        print("n="+str(n)+" dim="+str(dim)+" mtx size= "+str((getMatrixSize(dim,n,"csr")*8)/1000000000)+"GB")

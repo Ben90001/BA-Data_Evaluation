@@ -1,9 +1,0 @@
-Script execution started at: Mon 23 Sep 2024 06:08:21 PM CEST
-Finished ISTL at         Mon 23 Sep 2024 06:08:21 PM CEST
-Finished with executor: ref, matrix format: csr at      Tue 24 Sep 2024 01:39:36 AM CEST
-Finished with executor: ref, matrix format: coo at      Tue 24 Sep 2024 09:24:13 AM CEST
-Finished with executor: ref, matrix format: ell at      Tue 24 Sep 2024 05:13:33 PM CEST
-Finished with executor: omp, matrix format: csr at      Wed 25 Sep 2024 12:38:29 AM CEST
-Finished with executor: omp, matrix format: coo at      Wed 25 Sep 2024 08:09:32 AM CEST
-Finished with executor: omp, matrix format: ell at      Wed 25 Sep 2024 03:48:18 PM CEST
-Script execution ended at: Wed 25 Sep 2024 03:48:18 PM CEST
